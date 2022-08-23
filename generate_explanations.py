@@ -13,7 +13,8 @@ if __name__ == "__main__":
     # Filter the warning from matplotlib
     warnings.filterwarnings("ignore")
     # Datasets used for the experiments 
-    dataset_names = ["compas", "cancer"]#"generate_blob"]#"generate_circles"]#"generate_moons"]#'categorical_generate_blobs']#"generate_blobs"]#"blood"]#"cancer"]#"compas"]#"adult"]#"diabetes"]#'titanic']#
+    dataset_names = ["diabetes"]#"adult"]#"titanic"]#"compas", "cancer"]#"generate_blob"]#"generate_circles"]#"generate_moons"]
+    #'categorical_generate_blobs']#"generate_blobs"]#"blood"]#"cancer"]#"compas"]#"adult"]#"diabetes"]#'titanic']#
     
     models = [GaussianNB(),
                 VotingClassifier(estimators=[('lr', LogisticRegression()), ('gnb', GaussianNB()), ('svm', svm.SVC(probability=True))], voting='soft'),#('rc', RidgeClassifier())], voting="soft"),

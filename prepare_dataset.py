@@ -1,7 +1,7 @@
 from sklearn.datasets import make_circles, make_moons, make_blobs, load_breast_cancer
 from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
-from anchor import utils
+import utils
 import numpy as np
 import pandas as pd
 
@@ -118,6 +118,7 @@ def generate_dataset(dataset_name, multiclass=False):
     
     elif 'compas' in dataset_name:
         dataset = utils.load_dataset("compas", balance=False, discretize=False, dataset_folder="./dataset/")
+        dataframe = pd.DataFrame(dataset.data, columns=dataset.feature_names)
         x_data, y_data = dataset.train, dataset.labels_train
         categorical_features = dataset.categorical_features
         tab = [i for i in range(len(dataset.train[0]))]
@@ -162,6 +163,10 @@ def generate_dataset(dataset_name, multiclass=False):
         continuous_features = [x for x in range(len(x_data[0])) if x not in categorical_features]
     else:
         continuous_features = [x for x in range(len(x_data[0]))]
+
+    if dataframe is None:
+        dataframe = pd.DataFrame(x_data, columns=feature_names)
+
 
     return x_data, y_data, class_names, regression, multiclass, continuous_features, categorical_features, categorical_values, \
                 categorical_names, feature_names, transformations, dataframe
