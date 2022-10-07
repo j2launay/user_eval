@@ -151,6 +151,18 @@ def load_dataset(dataset_name, balance=False, discretize=True, dataset_folder='.
         dataset.class_names = ['Survived', 'Died']
         dataset.transformations = transformations
         
+    elif "obesity" in dataset_name:
+        feature_names = ['Gender', 'Age', 'Height', 'Weight', 'family_history_with_overweight',
+                'FAVC', 'FCVC', 'NCP', 'CAEC', 'SMOKE', 'CH2O', 'SCC', 'FAF', 'TUE', 'CALC', 'MTRANS', 'NObeyesdad']
+        dataset = load_csv_dataset(
+            os.path.join(dataset_folder, 'obesity.csv'), -1, ', ',
+            feature_names=feature_names, features_to_use=features_to_use,
+            categorical_features=categorical_features, 
+            discretize=discretize,
+            balance=balance, feature_transformations=transformations)
+        dataset.class_names = ['Normal', 'Obese']
+        dataset.transformations = transformations
+    
     elif dataset_name == 'compas':
         """
         feature_names = ['id', 'name', 'first', 'last', 'compas_screening_date', 'sex', 'dob', 

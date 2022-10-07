@@ -3,13 +3,13 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
 from growingspheres.utils.gs_utils import distances
+from prepare_dataset import transform_target_class
 
 # Explanations module
 from anchor import anchor_tabular
-import lime
+from lime import lime_tabular
 from growingspheres import counterfactuals as cf
-
-
+        
 class InitExplainers(object): 
     def __init__(self, train_data, class_names, black_box_predict, black_box_predict_proba=None,
                 growing_method="GF", continuous_features=None, categorical_features=None,
@@ -17,7 +17,7 @@ class InitExplainers(object):
                 nb_min_instance_in_field=800, first_radius=0.01, dicrease_radius=10, threshold_precision=0.95, 
                 nb_min_instance_per_class_in_field=100, verbose=False, 
                 categorical_names=None, linear_separability_index=0.99,
-                transformations=None):
+                transformations=None, feature_transformations=None):
         self.feature_names = feature_names
         self.max_mahalanobis = None
         self.train_data, self.test_data = train_test_split(train_data, test_size=0.4, random_state=42)
@@ -39,9 +39,9 @@ class InitExplainers(object):
         self.nb_min_instance_per_class_in_field = nb_min_instance_per_class_in_field
         self.verbose = verbose
         self.linear_separability_index = linear_separability_index
+        self.feature_transformations = feature_transformations
         self.black_box_labels = black_box_predict(self.train_data)
         if self.verbose: print("Setting interpretability methods")
-        print("categorical ", categorical_names)
         self.anchor_explainer = anchor_tabular.AnchorTabularExplainer(class_names, feature_names, self.train_data, 
                                                                     copy.copy(categorical_names), discretizer=discretizer)
         
@@ -67,7 +67,7 @@ class InitExplainers(object):
             self.encoded_features_names = np.append(lime_features_names,[x for x in self.encoded_features_names]) .tolist()
             
         
-        self.linear_explainer = lime.lime_tabular.LimeTabularExplainer(self.train_data, feature_names=feature_names, 
+        self.linear_explainer = lime_tabular.LimeTabularExplainer(self.train_data, feature_names=feature_names, 
                                                                 categorical_features=categorical_features, categorical_names=categorical_names,
                                                                 class_names=class_names, discretize_continuous=False,
                                                                 training_labels=self.black_box_labels)                                                            
@@ -107,11 +107,13 @@ class InitExplainers(object):
                                                     dicrease_radius=dicrease_radius,
                                                     feature_variance=self.feature_variance,  
                                                     probability_categorical_feature=self.probability_categorical_feature)
-    
+
     def predict(self, instance, linear_model=None, distance_metric='mahalanobis', nb_features_employed=None):
         self.farthest_distance = None
         nb_features_employed = len(instance) if nb_features_employed == None else nb_features_employed
         self.target_class = self.black_box_predict(instance.reshape(1, -1))[0]
+        self.target_class_name = transform_target_class(self.black_box_predict_proba(instance.reshape(1, -1))[0][1])
+        
         # Computes the distance to the farthest instance from the training dataset to bound generating instances 
         farthest_distance = 0
         for training_instance in self.train_data:
@@ -135,6 +137,8 @@ class InitExplainers(object):
                                                     min_counterfactual_in_sphere=self.nb_min_instance_per_class_in_field)
         self.closest_counterfactual = self.growing_field.enemy
         
+        self.counterfactual_class_name = transform_target_class(self.black_box_predict_proba(self.closest_counterfactual.reshape(1, -1))[0][1])
+
         if self.verbose:print("### Searching for local surrogate explanation")
         local_surrogate = self.linear_explainer.explain_instance(self.closest_counterfactual, 
                                                                     self.black_box_predict_proba, 

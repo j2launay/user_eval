@@ -115,15 +115,20 @@ class GrowingFields:
             if self.verbose == True:
                 print("Exploring...") 
             step_ = (self.dicrease_radius - 1) * radius_/2.0
+            cnt = 0
             while n_ennemies_ <= self.min_counterfactual_in_sphere:
+                cnt += 1
                 step_ = min(radius_ / 10, step_* 2)
                 layer = self.ennemies_in_layer_((radius_, radius_ + step_), self.n_in_layer)
                 n_ennemies_ = layer.shape[0]
                 radius_ = min(1, radius_ + step_)
-                #print("n ennemies", n_ennemies_)
-                #print("radius", radius_)
+                if self.verbose:
+                    print("n ennemies", n_ennemies_)
+                    print("radius", radius_)
                 if (radius_ == 1) and n_ennemies_ == 0:
                     return True
+                if cnt > 50 and radius_ == 1:
+                    raise AttributeError
         if self.verbose == True:
             print("Final radius: ", (radius_ - step_, radius_))
             print("Final number of ennemies: ", n_ennemies_)
