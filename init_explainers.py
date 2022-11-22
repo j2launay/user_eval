@@ -13,7 +13,7 @@ from growingspheres import counterfactuals as cf
 class InitExplainers(object): 
     def __init__(self, train_data, class_names, black_box_predict, black_box_predict_proba=None,
                 growing_method="GF", continuous_features=None, categorical_features=None,
-                categorical_values = None, feature_names=None, discretizer="decile", 
+                categorical_values = None, feature_names=None, discretizer="quartile", 
                 nb_min_instance_in_field=800, first_radius=0.01, dicrease_radius=10, threshold_precision=0.95, 
                 nb_min_instance_per_class_in_field=100, verbose=False, 
                 categorical_names=None, linear_separability_index=0.99,
@@ -66,7 +66,6 @@ class InitExplainers(object):
                     lime_categorical_features.append(i)
             self.encoded_features_names = np.append(lime_features_names,[x for x in self.encoded_features_names]) .tolist()
             
-        
         self.linear_explainer = lime_tabular.LimeTabularExplainer(self.train_data, feature_names=feature_names, 
                                                                 categorical_features=categorical_features, categorical_names=categorical_names,
                                                                 class_names=class_names, discretize_continuous=False,
@@ -112,7 +111,7 @@ class InitExplainers(object):
         self.farthest_distance = None
         nb_features_employed = len(instance) if nb_features_employed == None else nb_features_employed
         self.target_class = self.black_box_predict(instance.reshape(1, -1))[0]
-        self.target_class_name = transform_target_class(self.black_box_predict_proba(instance.reshape(1, -1))[0][1])
+        self.target_class_name = transform_target_class(self.black_box_predict_proba(instance.reshape(1, -1))[0][1], self.class_names)
         
         # Computes the distance to the farthest instance from the training dataset to bound generating instances 
         farthest_distance = 0
@@ -130,14 +129,14 @@ class InitExplainers(object):
         lime = self.linear_explainer.explain_instance(instance, self.black_box_predict_proba, 
                                                                     model_regressor=linear_model,
                                                                     num_features=nb_features_employed)
-        
+
         if self.verbose:print("### Searching for counterfactual explanation")
         self.growing_field.fit(instance, sparse=True, verbose=self.verbose, 
                                                     farthest_distance_training_dataset=farthest_distance,
                                                     min_counterfactual_in_sphere=self.nb_min_instance_per_class_in_field)
         self.closest_counterfactual = self.growing_field.enemy
         
-        self.counterfactual_class_name = transform_target_class(self.black_box_predict_proba(self.closest_counterfactual.reshape(1, -1))[0][1])
+        self.counterfactual_class_name = transform_target_class(self.black_box_predict_proba(self.closest_counterfactual.reshape(1, -1))[0][1], self.class_names)
 
         if self.verbose:print("### Searching for local surrogate explanation")
         local_surrogate = self.linear_explainer.explain_instance(self.closest_counterfactual, 

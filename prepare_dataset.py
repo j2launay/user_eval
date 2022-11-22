@@ -67,6 +67,51 @@ def generate_dataset(dataset_name, multiclass=False):
         feature_transformations = {0: sex_map, 3: binary_map, 4: binary_map, 5: vegetable_map, 6: main_meal_map, 
                 7: caec_map, 8: binary_map, 9: water_map, 10: binary_map, 11: physical_map, 12: smartphone_map, 13: caec_map, 14: mtrans_map}
         modify_feature_name = modify_obesity_feature()
+    
+    elif 'compas' in dataset_name:
+        dataset = utils.load_dataset("compas", balance=False, discretize=False, dataset_folder="./dataset/")
+        dataframe = pd.DataFrame(dataset.data, columns=dataset.feature_names)
+        x_data, y_data = dataset.train, dataset.labels_train
+        categorical_features = dataset.categorical_features
+        tab = [i for i in range(len(dataset.train[0]))]
+        categorical_names = dataset.categorical_names#
+        categorical_values =[]
+        for feature in categorical_features:
+            try:
+                tab = list(set(x_data[:,feature]))
+            except ValueError:
+                tab = [i for i in range(len(dataset.categorical_names[feature]))]
+            if not 0 in tab:
+                tab.insert(0, 0)
+            categorical_values.append(tab)
+
+        class_names = ['Recidiv', 'Vanish']
+        transformations = dataset.transformations
+
+        def race_transformation(target):
+            try:
+                return str(dataset.race_map[target])
+            except KeyError:
+                return target
+
+        def charge_degree_map_transformation(target):
+            try:
+                return str(dataset.charge_degree_map[target])
+            except KeyError:
+                return target
+                    
+        def charge_desc_map_transformation(target):
+            try:
+                return str(dataset.charge_desc_map[target])
+            except KeyError:
+                return target
+
+        def temp_dont_change(target):
+            return str(target)
+
+        feature_transformations = {0: sex_map, 2:race_transformation, 
+                3:temp_dont_change, 4:temp_dont_change, 5:temp_dont_change, 6:charge_degree_map_transformation, 7:charge_desc_map_transformation}
+        modify_feature_name = modify_compas_feature()
 
     elif "heart" in dataset_name:
         dataset = pd.read_csv("./dataset/heart/heart.csv")
@@ -175,25 +220,6 @@ def generate_dataset(dataset_name, multiclass=False):
     elif "circles" in dataset_name:
         x_data, y_data = make_circles(n_samples=1000, noise=0.05, random_state=0)
         class_names = ['class ' + str(Y)  for Y in range(len(set(y_data)))]
-    
-    elif 'compas' in dataset_name:
-        dataset = utils.load_dataset("compas", balance=False, discretize=False, dataset_folder="./dataset/")
-        dataframe = pd.DataFrame(dataset.data, columns=dataset.feature_names)
-        x_data, y_data = dataset.train, dataset.labels_train
-        categorical_features = dataset.categorical_features
-        tab = [i for i in range(len(dataset.train[0]))]
-        categorical_values =[]
-        for features in categorical_features:
-            try:
-                tab = list(set(x_data[:,features]))
-            except ValueError:
-                tab = [i for i in range(len(dataset.categorical_names[features]))]
-            if not 0 in tab:
-                tab.insert(0, 0)
-            categorical_values.append(tab)
-
-        class_names = ['Recidiv', 'Vanish']
-        transformations = dataset.transformations
 
     elif "mortality" in dataset_name:
         dataset = utils.load_dataset("mortality", balance=False, discretize=False, dataset_folder="./dataset/")
@@ -300,9 +326,9 @@ def main_meal_map(target_value):
     if target_value == 0:
         return 'Between 1 and 2'
     elif target_value == 1:
-        return 'Three'
+        return '3'
     else: 
-        return "More than three"
+        return "More than 3"
 
 def water_map(target_value):
     target_value = int(float(target_value))
@@ -340,7 +366,7 @@ def mtrans_map(target_value):
     elif target_value == 1: 
         return 'Bike'
     elif target_value == 2: 
-        return 'Public_Transportation'
+        return 'Public transportation'
     elif target_value == 3: 
         return 'Automobile'
     else:
@@ -365,6 +391,27 @@ def modify_obesity_feature():
     feature_name_replacement['MTRANS'] = ['Transportation used', 14]#["Which transportation do you usually use?", 14]
     return feature_name_replacement
 
+def modify_compas_feature():
+    feature_name_replacement = {}
+    feature_name_replacement['sex'] = ['Gender', 0]
+    feature_name_replacement['age'] = ['Age', 1]
+    feature_name_replacement['race'] = ['Race', 2]
+    feature_name_replacement['juv_fel_count'] = ['Juvenile felony count', 3] # nombre de crimes
+    #feature_name_replacement['decile_score'] = ['Decile Score', 4]
+    feature_name_replacement['juv_misd_count'] = ['Juvenile misdemeanor count', 4] # nombre de délits
+    #feature_name_replacement['juv_other_count'] = ['juv other count', 6]
+    feature_name_replacement['priors_count'] = ['Priors count', 5] # Nombre d'antécédents
+    #feature_name_replacement['days_b_screening_arrest'] = ['days_b_screening_arrest', 8] 
+    #feature_name_replacement['c_days_from_compas'] = ['c_days_from_compas', 9]
+    feature_name_replacement['c_charge_degree'] = ['Charge degree', 6] # Le degrée d'accusation
+    feature_name_replacement['c_charge_desc'] =	['Charge description', 7] # Description de la charge
+    #feature_name_replacement['is_recid'] = ['is_recid', 12]
+    #feature_name_replacement['is_violent_recid'] = ['is_violent_recid', 13]
+    #feature_name_replacement['decile_score.1'] = ['decile_score.1', 14]
+    #feature_name_replacement['v_decile_score'] = ['v_decile_score', 15]
+    #feature_name_replacement['priors_count.1'] = ['priors_count.1', 16]
+    return feature_name_replacement
+
 def round_obesity_dataset():
     data = pd.read_csv("./dataset/obesity/obesity.csv")
     data['FCVC'] = data['FCVC'].round()
@@ -376,17 +423,57 @@ def round_obesity_dataset():
     data['Height'] = data['Height'].round(2)
     data.to_csv("./dataset/obesity/obesity.csv", index=False)
     
-def transform_target_class(prediction):
-    if prediction < 0.25:
-        return "Underweight"
-    elif prediction < 0.5:
-        return "Healthy"
-    elif prediction < 0.75:
-        return "Overweight"
+def transform_target_class(prediction, class_names):
+    compas = "Recidiv" in class_names[0]
+    if compas:
+        if prediction < 0.25:
+            return "No Risk"
+        elif prediction < 0.5:
+            return "Low Risk"
+        elif prediction < 0.75:
+            return "Medium Risk"
+        else:
+            return "High Risk"
     else:
-        return "Obesity"
+        if prediction < 0.25:
+            return "Underweight"
+        elif prediction < 0.5:
+            return "Healthy"
+        elif prediction < 0.75:
+            return "Overweight"
+        else:
+            return "Obesity"
+
+def prepare_compas_dataset():
+    data = pd.read_csv("./dataset/compas/compas.csv")
+
+    try:
+        data.drop(["decile_score", 'juv_other_count', 'days_b_screening_arrest', 'c_days_from_compas', 'is_recid', 'is_violent_recid', 'decile_score.1', 'v_decile_score', 'priors_count.1'], axis=1, inplace=True)
+    except KeyError:
+        try:
+            data.drop(['Unnamed: 0'], axis=1, inplace=True)
+        except KeyError:
+            print()
+    data['two_year_recid'] = np.where(data['two_year_recid']==0, 1, 0)
+    #data.loc[data['priors_count'] == "more than three", 'priors_count'] = 3
+    #data.loc[data['priors_count'] > 2, 'priors_count'] = "3 or more"
+    data = data.groupby('c_charge_desc').filter(lambda x : len(x)>4)
+    print(data)
+    data.to_csv("./dataset/compas/compas.csv", index=False)
+
+def generate_compas_charge_description():
+    data = pd.read_csv("./dataset/compas/compas.csv")
+    charge_description = set(data['c_charge_desc'].tolist())
+    print(charge_description)
+    charge_desc_map = {}
+    for i, charge in enumerate(charge_description):
+        charge_desc_map[str(i)] = charge
+    print(charge_desc_map)
+    return charge_desc_map
 
 if __name__ == "__main__":
     #prepare_heart_dataset()
     #prepare_obesity_dataset()
-    round_obesity_dataset()
+    prepare_compas_dataset()
+    #generate_compas_charge_description()
+    #round_obesity_dataset()

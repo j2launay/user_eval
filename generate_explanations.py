@@ -3,7 +3,7 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier, VotingClassifier
 from sklearn.linear_model import LinearRegression, LogisticRegression, Ridge, SGDRegressor
 from sklearn.naive_bayes import GaussianNB
-from prepare_dataset import generate_dataset, preparing_dataset, transform_target_class
+from prepare_dataset import generate_dataset, preparing_dataset
 from init_explainers import InitExplainers
 from VisualisationExplanation import VisualisationExplanation
 import warnings
@@ -14,17 +14,18 @@ if __name__ == "__main__":
     # Filter the warning from matplotlib
     warnings.filterwarnings("ignore")
     # Datasets used for the experiments 
-    dataset_names = ["obesity"]#"obesity"]#"blood"]#"adult"]#"mortality"]#"heart"]#diabetes"]#"adult"]#"compas"]#"cancer"]#"titanic"]#
+    dataset_names = ["compas"]#"obesity"]#"blood"]#"adult"]#"mortality"]#"heart"]#diabetes"]#"adult"]#"compas"]#"cancer"]#"titanic"]#
     
     models = [#GaussianNB(),
-                VotingClassifier(estimators=[('lr', LogisticRegression()), ('gnb', GaussianNB()), ('svm', svm.SVC(probability=True))], voting='soft'),#('rc', RidgeClassifier())], voting="soft"),
                 GradientBoostingClassifier(n_estimators=20, learning_rate=1.0, random_state=1),
-                RandomForestClassifier(n_estimators=20, random_state=1), 
                 MLPClassifier(random_state=1, activation='logistic'),
-                svm.SVC(probability=True, random_state=1, class_weight="balanced")]
+                RandomForestClassifier(n_estimators=20, random_state=1), 
+                svm.SVC(probability=True, random_state=1, class_weight="balanced"),
+                VotingClassifier(estimators=[('lr', LogisticRegression()), ('gnb', GaussianNB()), ('svm', svm.SVC(probability=True))], voting='soft')#('rc', RidgeClassifier())], voting="soft"),
+                ]
 
     # Number of instances explained by each model on each dataset
-    max_instance_to_explain = 20
+    max_instance_to_explain = 75
     """ All the variable necessaries for generating the graph results """
     # Store results inside graph if set to True
     graph = True
@@ -74,7 +75,7 @@ if __name__ == "__main__":
             counterfactuals_columns += 'target'
             temp_counterfactuals, temp_rules = pd.DataFrame(columns=counterfactuals_columns), pd.DataFrame()#[], []
 
-            for instance_to_explain, label in zip(x_test[3:], y_test[3:]):
+            for instance_to_explain, label in zip(x_test[6:], y_test[6:]):
                 if cnt == max_instance_to_explain:
                     break
                 os.makedirs(os.path.dirname("./results/" + dataset_name + "/" + model_name + "/" + str(cnt) + "/"), exist_ok=True)
@@ -84,8 +85,8 @@ if __name__ == "__main__":
                 print("its associated proba", black_box.predict_proba(instance_to_explain.reshape(1, -1)))
 
                 try:
-                    test += 2
-                except NameError:
+                    #test += 2
+                #except NameError:
                     filename_per_instance = "./results/" + dataset_name + "/" + model_name + "/" + str(cnt) + "/"
                     explainers.filename = filename_per_instance
                     anchor_exp, lime, closest_counterfactual, local_surrogate = explainers.predict(instance_to_explain, 
@@ -105,21 +106,30 @@ if __name__ == "__main__":
                     temp_counterfactuals = pd.concat([temp_counterfactuals, counterfactuals])
                     counterfactuals.to_csv("./results/" + dataset_name + "/" + model_name + "/counterfactual_explanations.csv")
                     
-                    visualisation_explanation.generate_target_instance_array(explainers, modify_feature_name, filename, instance_to_explain)
-                    counterfactual_text_representation = visualisation_explanation.generate_counterfactual_text(explainers, closest_counterfactual, instance_to_explain.copy())
+
+                    # LIME visualisation
+                    lime_rule = '\n'.join(map(str, lime.as_list()))
+                    pos_lime_exp, neg_lime_exp, other_features_sum_values = visualisation_explanation.generate_linear_text_explanation(lime_normalised, 
+                                                modify_feature_name, filename_per_instance, instance_to_explain.copy(), categorical_features, feature_transformations, 
+                                                black_box.predict_proba(instance_to_explain.reshape(1, -1))[0][1], explainers)
+                    visualisation_explanation.generate_linear_image_explanation(pos_lime_exp, neg_lime_exp, filename_per_instance, explainers, other_features_sum_values)
+                    
+                    visualisation_explanation.generate_target_instance_array(explainers, modify_feature_name, filename_per_instance, instance_to_explain)
+                    
+                    # Growing Fields representation
+                    counterfactual_text_representation, initial_prediction_superior = visualisation_explanation.generate_counterfactual_text(explainers, \
+                                                                                closest_counterfactual, instance_to_explain.copy())
+                    visualisation_explanation.generate_counterfactual_image(counterfactual_text_representation, modify_feature_name, filename_per_instance, \
+                                                                                explainers, initial_prediction_superior)
+
+                    # Anchors representation
                     anchor_rule = visualisation_explanation.generate_anchor_image(anchor_exp, modify_feature_name, categorical_features, feature_transformations, \
                                                                                 filename_per_instance, explainers)
-                    visualisation_explanation.generate_counterfactual_image(counterfactual_text_representation, modify_feature_name, filename_per_instance, explainers)
 
                     """print(anchor_exp.names())
                     print("and the associate precision for each sub rule:")
                     print(anchor_exp.exp_map['precision'])"""
 
-                    lime_rule = '\n'.join(map(str, lime.as_list()))
-                    pos_lime_exp, neg_lime_exp, other_features_sum_values = visualisation_explanation.generate_linear_text_explanation(lime_normalised, 
-                                                modify_feature_name, filename_per_instance, instance_to_explain.copy(), categorical_features, feature_transformations, 
-                                                black_box.predict_proba(instance_to_explain.reshape(1, -1))[0][1], explainers)
-                    visualisation_explanation.generate_linear_image_explanation(pos_lime_exp, neg_lime_exp, filename, explainers, other_features_sum_values)
 
 
                     local_surrogate_rule = '\n'.join(map(str, local_surrogate.as_list()))
