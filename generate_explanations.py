@@ -17,9 +17,9 @@ if __name__ == "__main__":
     dataset_names = ["compas"]#"obesity"]#"blood"]#"adult"]#"mortality"]#"heart"]#diabetes"]#"adult"]#"compas"]#"cancer"]#"titanic"]#
     
     models = [#GaussianNB(),
-                GradientBoostingClassifier(n_estimators=20, learning_rate=1.0, random_state=1),
+                #GradientBoostingClassifier(n_estimators=20, learning_rate=1.0, random_state=1),
                 MLPClassifier(random_state=1, activation='logistic'),
-                RandomForestClassifier(n_estimators=20, random_state=1), 
+                #RandomForestClassifier(n_estimators=20, random_state=1), 
                 svm.SVC(probability=True, random_state=1, class_weight="balanced"),
                 VotingClassifier(estimators=[('lr', LogisticRegression()), ('gnb', GaussianNB()), ('svm', svm.SVC(probability=True))], voting='soft')#('rc', RidgeClassifier())], voting="soft"),
                 ]
@@ -75,13 +75,16 @@ if __name__ == "__main__":
             counterfactuals_columns += 'target'
             temp_counterfactuals, temp_rules = pd.DataFrame(columns=counterfactuals_columns), pd.DataFrame()#[], []
 
-            for instance_to_explain, label in zip(x_test[6:], y_test[6:]):
+            for instance_to_explain, label in zip(x_test, y_test):
+                if label != black_box.predict(instance_to_explain.reshape(1, -1))[0]:
+                    continue
                 if cnt == max_instance_to_explain:
                     break
                 os.makedirs(os.path.dirname("./results/" + dataset_name + "/" + model_name + "/" + str(cnt) + "/"), exist_ok=True)
                 print("### Instance number:", cnt + 1, "over", max_instance_to_explain)
                 print("### Models ", nb_model + 1, "over", len(models))
                 print("instance to explain:", instance_to_explain)
+                print("the label", label)
                 print("its associated proba", black_box.predict_proba(instance_to_explain.reshape(1, -1)))
 
                 try:
@@ -94,7 +97,7 @@ if __name__ == "__main__":
                                                                                 distance_metric=distance_metric,
                                                                                 nb_features_employed=None)#6)
 
-                    lime_normalised = visualisation_explanation.normalize_linear_explanation(lime, black_box.predict_proba(instance_to_explain.reshape(1, -1))[0][1])
+                    lime_normalised, sum_coef_lime = visualisation_explanation.normalize_linear_explanation(lime, black_box.predict_proba(instance_to_explain.reshape(1, -1))[0][1])
                     dataframe.loc[dataframe.shape[0]] = instance_to_explain
                     dataframe.loc[dataframe.shape[0]] = closest_counterfactual
                     dataframe.loc[dataframe.shape[0]] = closest_counterfactual-instance_to_explain
@@ -111,7 +114,8 @@ if __name__ == "__main__":
                     lime_rule = '\n'.join(map(str, lime.as_list()))
                     pos_lime_exp, neg_lime_exp, other_features_sum_values = visualisation_explanation.generate_linear_text_explanation(lime_normalised, 
                                                 modify_feature_name, filename_per_instance, instance_to_explain.copy(), categorical_features, feature_transformations, 
-                                                black_box.predict_proba(instance_to_explain.reshape(1, -1))[0][1], explainers)
+                                                sum_coef_lime, explainers)
+                                                #black_box.predict_proba(instance_to_explain.reshape(1, -1))[0][1], explainers)
                     visualisation_explanation.generate_linear_image_explanation(pos_lime_exp, neg_lime_exp, filename_per_instance, explainers, other_features_sum_values)
                     
                     visualisation_explanation.generate_target_instance_array(explainers, modify_feature_name, filename_per_instance, instance_to_explain)

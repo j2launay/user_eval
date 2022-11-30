@@ -23,9 +23,9 @@ def split_explanation(feature):
         temp_rule = rule[0].split("<")
         if len(temp_rule) == 2:
             rule[0] = temp_rule[1][1:]
-            rule[1] = "between " + temp_rule[0] + " and " + rule[1]
+            rule[1] = "between " + str(int(float(temp_rule[0]))) + " and " + str(int(float(rule[1])))
         else:
-            rule[1] = "<= " + rule[1] if not categorical else rule[1]
+            rule[1] = "<= " + str(int(float(rule[1]))) if not categorical else rule[1]
     if len(rule) == 1:
         rule = rule[0].split(">=")
         if len(rule) == 2:
@@ -34,19 +34,19 @@ def split_explanation(feature):
                 rule[0] = temp_rule[1][1:]
                 rule[1] = "between " + rule[0] + " and " + temp_rule[1]
             else:
-                rule[1] = ">= " + rule[1] if not categorical else rule[1]
+                rule[1] = ">= " + str(int(float(rule[1]))) if not categorical else rule[1]
     if len(rule) == 1:
         rule = rule[0].split("=")
         if len(rule) == 2:
-            rule[1] = "= " + rule[1] if not categorical else rule[1]
+            rule[1] = "= " + str(int(float(rule[1]))) if not categorical else rule[1]
     if len(rule) == 1:
         rule = rule[0].split("<")
         if len(rule) == 2:
-            rule[1] = "< " + rule[1] if not categorical else rule[1]
+            rule[1] = "< " + str(int(float(rule[1]))) if not categorical else rule[1]
     if len(rule) == 1:
         rule = rule[0].split(">")
         if len(rule) == 2:
-            rule[1] = "> " + rule[1] if not categorical else rule[1]
+            rule[1] = "> " + str(int(float(rule[1]))) if not categorical else rule[1]
     return rule
 
 def anchor_image_fancy(init_explainers, ax, filename, height_legend, n_cols):
@@ -60,7 +60,7 @@ def anchor_image_fancy(init_explainers, ax, filename, height_legend, n_cols):
     plt.subplots_adjust(bottom=0.1, top=0.75)
     #ax.set_xticks(np.arange(0, 101, 10), labels=[str(x) for x in np.arange(0, 101, 10)], size=16)
     plt.legend(loc='upper center', bbox_to_anchor=(0.5, height_legend),
-          fancybox=True, shadow=True, fontsize=16, ncol=n_cols)
+          fancybox=True, shadow=True, fontsize=14, ncol=n_cols)
     plt.savefig(filename + "rule_image.png")
     plt.show(block=False)
     plt.pause(0.1)
@@ -73,7 +73,7 @@ def counterfactual_image_fancy(ax, filename, height_legend, n_cols):
     #ax.set_xticks([0.25, 0.5, 0.75], labels=["25%", "50%", "75%"])
     #ax.yaxis.set_tick_params(width=10)
     ax.legend(loc='upper center', bbox_to_anchor=(0.5, height_legend),
-          fancybox=True, shadow=True, fontsize=16, ncol=n_cols)
+          fancybox=True, shadow=True, fontsize=14, ncol=n_cols)
     plt.subplots_adjust(bottom=0.1, top=0.8)
     plt.savefig(filename + "counterfactual_image.png")
     plt.show(block=False)
@@ -182,7 +182,7 @@ class VisualisationExplanation(object):
             ax.arrow(last_precision,0.9,0,0.1,transform=mytrans, head_width=2, head_length=0.1, length_includes_head=True, clip_on=False, color="black")
             plt.axvline(last_precision, ymax=0.9, color="black", linewidth=4)
 
-            ax.annotate(text = str(last_precision) + "%", xy =(init_precision-0.02, 1.01), xycoords='axes fraction', color="black", size=20)
+            ax.annotate(text = str(last_precision) + "%", xy =(init_precision-0.02, 1.01), xycoords='axes fraction', color="black", size=14)
         save_dictionary_to_csv(filename_per_instance + "anchor_rule.csv", [anchor_rule])
         n_cols = int((len(anchor_exp.names()) + 1) / 2)
         anchor_image_fancy(init_explainers, ax, filename_per_instance, 1.1 + ((len(anchor_exp.names())/n_cols)/10), n_cols=n_cols)
@@ -212,12 +212,12 @@ class VisualisationExplanation(object):
             feature_translate = modify_feature_name[counterfactual['feature name']][0]
             if initial_prediction_superior:
                 label = feature_translate + ' changing from ' + r"${\bf " + add_space(counterfactual['value target']) + r"}$" + 'to ' + \
-                        r"${\bf " + add_space(counterfactual['value cf']) + r"}$" + 'reduces prediction by ' + str(int((last_prediction - counterfactual['prediction']) * 100)) + "%"
+                        r"${\bf " + add_space(counterfactual['value cf']) + r"}$" + 'reduces prediction by ' + str(int(float((last_prediction - counterfactual['prediction']) * 100))) + "%"
                 plt.barh([0.5], last_value-counterfactual['prediction'], height=0.6, left=counterfactual['prediction'], label=label)
 
             else:
                 label = feature_translate + ' changing from ' + r"${\bf " + add_space(counterfactual['value target']) + r"}$" + 'to ' + \
-                        r"${\bf " + add_space(counterfactual['value cf']) + r"}$" + 'increases prediction by ' + str(int((counterfactual['prediction'] - last_prediction) * 100)) + "%"
+                        r"${\bf " + add_space(counterfactual['value cf']) + r"}$" + 'increases prediction by ' + str(int(float((counterfactual['prediction'] - last_prediction) * 100))) + "%"
                 last_value = last_prediction if last_value is None else last_value 
                 plt.barh([0.5], counterfactual['prediction'] - last_value, height=0.6, left=last_value, label=label)
             last_value = counterfactual['prediction']
@@ -230,7 +230,7 @@ class VisualisationExplanation(object):
                 length_includes_head=True, color="black", clip_on=False)
 
         x_bounds = ax.get_xlim()
-        ax.annotate(text = "Alternative outcome",#: " + r"${\bf " + add_space(init_explainers.counterfactual_class_name) + r"}$", 
+        ax.annotate(text = "Alternative prediction",#: " + r"${\bf " + add_space(init_explainers.counterfactual_class_name) + r"}$", 
                 xy =(min(0.9, max(-0.1, ((last_prediction-x_bounds[0])/(x_bounds[1]-x_bounds[0])) - 0.08)), -0.07), 
                 xycoords='axes fraction', color="black", size=20)
         
@@ -242,23 +242,26 @@ class VisualisationExplanation(object):
     def normalize_linear_explanation(self, lime, target_predict_proba):
         sum_coefficient_features = 0
         for element in lime.as_list():
-            sum_coefficient_features += element[1]
-        
+            sum_coefficient_features += abs(element[1])
+
         normalized_coefficient_values = []
         for element in lime.as_list():
-            normalized_coefficient_values.append(round(element[1]/sum_coefficient_features*target_predict_proba, 2))
+            normalized_coefficient_values.append(element[1]/abs(sum_coefficient_features)*target_predict_proba)
 
         lime_exp_normalised = []
-        nb_feature, old_coef = 0, 0
+        nb_feature, old_coef, sum_features_use = 0, 0, 0
         for coefficient, lime_exp in zip(normalized_coefficient_values, lime.as_list()):
             temp_difference_coefficient_value = abs(old_coef) - abs(coefficient)
-            if nb_feature > 1 and (nb_feature > 4 or temp_difference_coefficient_value > abs(coefficient)/2):
+            if nb_feature > 1 and (nb_feature > 4 or temp_difference_coefficient_value > abs(coefficient)/1.5):
                 break
             else:
                 old_coef = coefficient
             lime_exp_normalised.append([lime_exp[0], coefficient])
+            sum_features_use += coefficient
             nb_feature += 1
-        return lime_exp_normalised
+        sum_all_features = sum(normalized_coefficient_values)
+        sum_features_not_use = sum_all_features - sum_features_use
+        return lime_exp_normalised, sum_features_not_use
     
     def generate_linear_image_explanation(self, pos_lime_exp, neg_lime_exp, filename, init_explainer, other_features_sum_values):
         def store_graph_values_left(feature_lime_exp, left_array_graph_value, right_array_graph_value):
@@ -272,7 +275,7 @@ class VisualisationExplanation(object):
                 else:
                     right_array_graph_value.append([last, "L"])
             return left_array_graph_value, right_array_graph_value
-        left_array_graph_value = [0]
+        left_array_graph_value = [0.5]
         left_array_graph_value, right_array_graph_value = store_graph_values_left(pos_lime_exp, left_array_graph_value, [])
         left_array_graph_value, right_array_graph_value = store_graph_values_left(neg_lime_exp, left_array_graph_value, right_array_graph_value)
         
@@ -312,9 +315,9 @@ class VisualisationExplanation(object):
         ax.set_yticks(np.arange(len(pos_lime_exp) + len(neg_lime_exp) + 1), labels=labels, size=label_size)
         
         # Add the score of each feature value at the side of the bar
-        labels_bar = [["+" + str(int(other_features_sum_values * 100)) + "%" if other_features_sum_values > 0 \
-            else str(int(other_features_sum_values * 100)) + "%"],
-                ["+" + str(int(x[2] * 100)) + "%" for x in reversed(pos_lime_exp)], [str(int(x[2] * 100)) + "%" for x in reversed(neg_lime_exp)]]
+        labels_bar = [["+" + str(int(float(other_features_sum_values * 100))) + "%" if other_features_sum_values > 0 \
+            else str(int(float(other_features_sum_values * 100))) + "%"],
+                ["+" + str(int(float(x[2] * 100))) + "%" for x in reversed(pos_lime_exp)], [str(int(float(x[2] * 100))) + "%" for x in reversed(neg_lime_exp)]]
         for bars, labels in zip(ax.containers, labels_bar):
             ax.bar_label(bars, labels=labels, size=label_size+2, padding=6)
 
@@ -322,12 +325,10 @@ class VisualisationExplanation(object):
         linear_image_fancy_end(ax, filename, right_array_graph_value)
 
     def generate_linear_text_explanation(self, lime, modify_feature_name, filename, target_instance, 
-                        categorical_features, feature_transformations, target_proba, init_explainer):
+                        categorical_features, feature_transformations, other_features_sum_values, init_explainer):
         final_text = []
-        sum_coef = 0
         pos_graphical_answer_question, neg_graphical_answer_question = [], []
         for lime_exp in lime:
-            sum_coef += lime_exp[1]
             feature = lime_exp[0]
             rule = split_explanation(feature)
             question, nb_feature = modify_feature_name[rule[0]][0], modify_feature_name[rule[0]][1]
@@ -346,12 +347,11 @@ class VisualisationExplanation(object):
             
             text = "answering " + answer + " to " + question
             text += " increases " if lime_exp[1] > 0 else " reduces "
-            text += "the chance of being \n " + init_explainer.target_class_name + " \n by " + str(int(lime_exp[1] * 100))
+            text += "the chance of being \n " + init_explainer.target_class_name + " \n by " + str(int(float(lime_exp[1] * 100)))
             final_text.append([text])
 
-        other_features_sum_values = target_proba - sum_coef
         additional_text = "the other factors increases " if other_features_sum_values > 0 else "the other factors reduces " 
-        additional_text += "the prediction of " + str(int(other_features_sum_values * 100)) + " to be " + init_explainer.target_class_name
+        additional_text += "the prediction of " + str(int(float(other_features_sum_values * 100))) + " to be " + init_explainer.target_class_name
         final_text.append([additional_text])
         save_dictionary_to_csv(filename + "linear_text.csv", final_text, dictionnaire=False)
         return pos_graphical_answer_question, neg_graphical_answer_question, other_features_sum_values

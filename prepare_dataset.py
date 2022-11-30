@@ -96,9 +96,11 @@ def generate_dataset(dataset_name, multiclass=False):
 
         def charge_degree_map_transformation(target):
             try:
-                return str(dataset.charge_degree_map[target])
+                return "minor offences" if str(dataset.charge_degree_map[target]) == "M" else "major offences"
+                #return str(dataset.charge_degree_map[target])
             except KeyError:
-                return target
+                return "minor offences" if target == "M" else "major offences"
+                #return target
                     
         def charge_desc_map_transformation(target):
             try:
@@ -380,13 +382,13 @@ def modify_obesity_feature():
     feature_name_replacement['family_history_with_overweight'] = ['Family member has overweight', 3]#["Has a family member suffered or suffers from overweight?", 3]
     feature_name_replacement['FAVC'] = ['Frequent consumption of high caloric food', 4]#["Do you eat high caloric food frequently?", 4]
     feature_name_replacement['FCVC'] = ['Frequency of consumption of vegetables', 5]#["Do you usually eat vegetables in your meals?", 5]
-    feature_name_replacement['NCP'] = ['Number of main meals', 6]#["How many main meals do you have daily?", 6]
+    feature_name_replacement['NCP'] = ['Number of daily meals', 6]#["How many main meals do you have daily?", 6]
     feature_name_replacement['CAEC'] = ['Consumption of food between meals', 7]#["Do you eat any food between meals?", 7]
     feature_name_replacement['SMOKE'] = ['Smoke', 8]#["Do you smoke?", 8]
     feature_name_replacement['CH2O'] = ['Consumption of water daily', 9]#["How much water do you drink daily?", 9]
     feature_name_replacement['SCC'] = ['Calories consumption monitoring', 10]#["Do you monitor the calories you eat daily?", 10]
-    feature_name_replacement['FAF'] = ['Physical activity frequency', 11]#["How often do you have physical activity?", 11]
-    feature_name_replacement['TUE'] = ['Time using technology devices', 12]#["How much time do you use technological devices such as cell phone, videogames, television, computer and others?", 12]
+    feature_name_replacement['FAF'] = ['Physical activity frequency per week', 11]#["How often do you have physical activity?", 11]
+    feature_name_replacement['TUE'] = ['Time using technology devices daily', 12]#["How much time do you use technological devices such as cell phone, videogames, television, computer and others?", 12]
     feature_name_replacement['CALC'] = ['Consumption of alcohol', 13]#["how often do you drink alcohol?", 13]
     feature_name_replacement['MTRANS'] = ['Transportation used', 14]#["Which transportation do you usually use?", 14]
     return feature_name_replacement
@@ -396,32 +398,21 @@ def modify_compas_feature():
     feature_name_replacement['sex'] = ['Gender', 0]
     feature_name_replacement['age'] = ['Age', 1]
     feature_name_replacement['race'] = ['Race', 2]
-    feature_name_replacement['juv_fel_count'] = ['Juvenile felony count', 3] # nombre de crimes
+    feature_name_replacement['juv_fel_count'] = ['Number of juvenile major offences', 3] # nombre de crimes
     #feature_name_replacement['decile_score'] = ['Decile Score', 4]
-    feature_name_replacement['juv_misd_count'] = ['Juvenile misdemeanor count', 4] # nombre de délits
+    feature_name_replacement['juv_misd_count'] = ['Number of juvenile minor offences', 4] # nombre de délits
     #feature_name_replacement['juv_other_count'] = ['juv other count', 6]
-    feature_name_replacement['priors_count'] = ['Priors count', 5] # Nombre d'antécédents
+    feature_name_replacement['priors_count'] = ['Number of previous arrest', 5] # Nombre d'antécédents
     #feature_name_replacement['days_b_screening_arrest'] = ['days_b_screening_arrest', 8] 
     #feature_name_replacement['c_days_from_compas'] = ['c_days_from_compas', 9]
-    feature_name_replacement['c_charge_degree'] = ['Charge degree', 6] # Le degrée d'accusation
-    feature_name_replacement['c_charge_desc'] =	['Charge description', 7] # Description de la charge
+    feature_name_replacement['c_charge_degree'] = ['The degree of the charge', 6] # Le degrée d'accusation
+    feature_name_replacement['c_charge_desc'] =	['Description of the charge', 7] # Description de la charge
     #feature_name_replacement['is_recid'] = ['is_recid', 12]
     #feature_name_replacement['is_violent_recid'] = ['is_violent_recid', 13]
     #feature_name_replacement['decile_score.1'] = ['decile_score.1', 14]
     #feature_name_replacement['v_decile_score'] = ['v_decile_score', 15]
     #feature_name_replacement['priors_count.1'] = ['priors_count.1', 16]
     return feature_name_replacement
-
-def round_obesity_dataset():
-    data = pd.read_csv("./dataset/obesity/obesity.csv")
-    data['FCVC'] = data['FCVC'].round()
-    data['NCP'] = data['NCP'].round()
-    data['CH2O'] = data['CH2O'].round()
-    data['FAF'] = data['FAF'].round()
-    data['TUE'] = data['TUE'].round()
-    data['Age'] = data['Age'].round()
-    data['Height'] = data['Height'].round(2)
-    data.to_csv("./dataset/obesity/obesity.csv", index=False)
     
 def transform_target_class(prediction, class_names):
     compas = "Recidiv" in class_names[0]
@@ -471,9 +462,20 @@ def generate_compas_charge_description():
     print(charge_desc_map)
     return charge_desc_map
 
+def round_obesity_dataset():
+    data = pd.read_csv("./dataset/obesity/obesity.csv")
+    data['FCVC'] = data['FCVC'].round()
+    data['NCP'] = data['NCP'].round()
+    data['CH2O'] = data['CH2O'].round()
+    data['FAF'] = data['FAF'].round()
+    data['TUE'] = data['TUE'].round()
+    data['Age'] = data['Age'].round()
+    data['Height'] = data['Height'].round(2) * 100
+    data.to_csv("./dataset/obesity/obesity.csv", index=False)
+
 if __name__ == "__main__":
     #prepare_heart_dataset()
     #prepare_obesity_dataset()
-    prepare_compas_dataset()
-    #generate_compas_charge_description()
+    #prepare_compas_dataset()
+    generate_compas_charge_description()
     #round_obesity_dataset()
