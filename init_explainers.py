@@ -7,7 +7,7 @@ from prepare_dataset import transform_target_class
 
 # Explanations module
 from anchor import anchor_tabular
-from lime import lime_tabular
+from limet import lime_tabular
 from growingspheres import counterfactuals as cf
         
 class InitExplainers(object): 
@@ -69,7 +69,8 @@ class InitExplainers(object):
         self.linear_explainer = lime_tabular.LimeTabularExplainer(self.train_data, feature_names=feature_names, 
                                                                 categorical_features=categorical_features, categorical_names=categorical_names,
                                                                 class_names=class_names, discretize_continuous=False,
-                                                                training_labels=self.black_box_labels)                                                            
+                                                                training_labels=self.black_box_labels, sample_around_instance=True,
+                                                                kernel_width=0.2)                                                         
 
         # Compute and store variance of each feature
         self.feature_variance = []
@@ -128,7 +129,8 @@ class InitExplainers(object):
         if self.verbose:print("### Searching for lime explanation")
         lime = self.linear_explainer.explain_instance(instance, self.black_box_predict_proba, 
                                                                     model_regressor=linear_model,
-                                                                    num_features=nb_features_employed)
+                                                                    num_features=nb_features_employed,
+                                                                    labels=(0,1))
 
         if self.verbose:print("### Searching for counterfactual explanation")
         self.growing_field.fit(instance, sparse=True, verbose=self.verbose, 

@@ -176,22 +176,25 @@ class VisualisationExplanation(object):
             precision = int(precision*100)
             label = rule[0] + " " + r"${\bf " + add_space(answer) + r"}$"
             plt.barh([50], precision-last_precision, height=60, label=label, left=last_precision)
+
+            print_new_precision_rule = True if precision - last_precision > 3 else False
             last_precision = precision
             
             mytrans = transforms.blended_transform_factory(ax.transData, ax.transAxes)
             ax.arrow(last_precision,0.9,0,0.1,transform=mytrans, head_width=2, head_length=0.1, length_includes_head=True, clip_on=False, color="black")
             plt.axvline(last_precision, ymax=0.9, color="black", linewidth=4)
 
-            ax.annotate(text = str(last_precision) + "%", xy =(init_precision-0.02, 1.01), xycoords='axes fraction', color="black", size=14)
+            if print_new_precision_rule:
+                ax.annotate(text = str(last_precision) + "%", xy =(init_precision-0.02, 1.01), xycoords='axes fraction', color="black", size=14)
         save_dictionary_to_csv(filename_per_instance + "anchor_rule.csv", [anchor_rule])
-        n_cols = int((len(anchor_exp.names()) + 1) / 2)
+        n_cols = int((len(anchor_exp.names()) + 2) / 3)
         anchor_image_fancy(init_explainers, ax, filename_per_instance, 1.1 + ((len(anchor_exp.names())/n_cols)/10), n_cols=n_cols)
         return anchor_rule
 
     def generate_counterfactual_image(self, counterfactual_exp, modify_feature_name, filename_per_instance, init_explainers, initial_prediction_superior):
         last_prediction = counterfactual_exp[0]['initial prediction']        
         target_instance_text = [["If you change:"]]
-        fig, ax = plt.subplots(figsize=(18, 7))
+        fig, ax = plt.subplots(figsize=(18, 8))
         linear_image_fancy(ax, init_explainers, y_lim=1.02, height=1.5)#-0.05)
 
         # Generate the bar indicating the initial prediction of the AI model as well as the prediction by the model
@@ -236,21 +239,37 @@ class VisualisationExplanation(object):
         
         target_instance_text.append(['the prediction would be ' + init_explainers.counterfactual_class_name])# + " with a probability of " + str(last_prediction)])
         save_dictionary_to_csv(filename_per_instance + "counterfactual_text.csv", target_instance_text, dictionnaire=False)
-        n_cols = int((nb + 2)/2)
-        counterfactual_image_fancy(ax, filename_per_instance, 1.2 + nb/n_cols/10, n_cols=n_cols)
+        n_cols = int((nb + 3)/3)
+        counterfactual_image_fancy(ax, filename_per_instance, 1.2 + ((nb/n_cols)/15), n_cols=n_cols)#1.1 + nb/n_cols/10, n_cols=n_cols)
 
     def normalize_linear_explanation(self, lime, target_predict_proba):
         sum_coefficient_features = 0
-        for element in lime.as_list():
+        print(lime.intercept)
+        label = 0 if target_predict_proba < 0.5 else 1
+        print(lime.as_list(label))
+        for element in lime.as_list(label):
             sum_coefficient_features += abs(element[1])
 
+        print("sum coefficient", sum_coefficient_features)
+        print("target proba", target_predict_proba)
         normalized_coefficient_values = []
-        for element in lime.as_list():
-            normalized_coefficient_values.append(element[1]/abs(sum_coefficient_features)*target_predict_proba)
+        if target_predict_proba > 0.5:
+            normalized_target_proba = target_predict_proba - 0.5
+            for element in lime.as_list(label):
+                normalized_coefficient_values.append(element[1]/sum_coefficient_features*normalized_target_proba)#target_predict_proba)
+        else:
+            normalized_target_proba = 0.5 - target_predict_proba
+            for element in lime.as_list(label):
+                normalized_coefficient_values.append(element[1]/sum_coefficient_features*normalized_target_proba)#target_predict_proba)
+
+        print("modified proba", normalized_target_proba)
+        print()
+        print("normalized coef", normalized_coefficient_values)
+        print("sum", sum(normalized_coefficient_values))
 
         lime_exp_normalised = []
         nb_feature, old_coef, sum_features_use = 0, 0, 0
-        for coefficient, lime_exp in zip(normalized_coefficient_values, lime.as_list()):
+        for coefficient, lime_exp in zip(normalized_coefficient_values, lime.as_list(label)):
             temp_difference_coefficient_value = abs(old_coef) - abs(coefficient)
             if nb_feature > 1 and (nb_feature > 4 or temp_difference_coefficient_value > abs(coefficient)/1.5):
                 break
@@ -289,28 +308,59 @@ class VisualisationExplanation(object):
 
         label_size = 18
         
-        # Generate the bar indicating the final prediction of the AI model as well as the prediction by the model
-        plt.axvline(round(left_array_graph_value[-1] + other_features_sum_values, 2), ymin=0.01, color="black", linewidth=4)
-        x_bounds = ax.get_xlim()
-        mytrans = transforms.blended_transform_factory(ax.transData, ax.transAxes)
-        ax.arrow(round(left_array_graph_value[-1] + other_features_sum_values, 2),0.01,0,-.05,transform=mytrans, head_width=0.02, head_length=0.05, 
-                length_includes_head=True, color="black", clip_on=False)
-        ax.annotate(text = "AI's Prediction",#: " + r"${\bf " + init_explainer.target_class_name + r"}$", 
-            xy =(max(min((((left_array_graph_value[-1] + \
-                other_features_sum_values)-x_bounds[0])/(x_bounds[1]-x_bounds[0])), 0.95) - 0.1, 0), -0.1), 
-                    xycoords='axes fraction', color="black", size=label_size+4)
         
         # Color of the other features sum values
         other_color = "Blue" if other_features_sum_values < 0 else "Red"
-        ax.barh([0], [round(other_features_sum_values, 2)], left=[left_array_graph_value[-1]], color=other_color)
-        # Pos features from lime exp
+        ax.barh([0], [round(other_features_sum_values, 2)], left=[left_array_graph_value[-1]], color=other_color, alpha=0)
+        # Disply positive features from lime exp
         ax.barh(np.arange(len(neg_lime_exp) + 1, len(pos_lime_exp) + \
             len(neg_lime_exp) + 1), [x[2] for x in reversed(pos_lime_exp)], \
-            left=left_array_graph_value[:len(pos_lime_exp)][::-1], color="Red", alpha=1)
-        # Neg features from lime exp
+            left=left_array_graph_value[:len(pos_lime_exp)][::-1], color="Red", alpha=0)
+        
+        final_prediction = max(min(100, left_array_graph_value[-1] + other_features_sum_values), 0)
+        if final_prediction < 0.25:
+            color_prediction = "blue"
+        elif final_prediction < 0.5:
+            color_prediction = "green"
+        elif final_prediction < 0.75:
+            color_prediction = "orange"
+        else:
+            color_prediction = "red"
+        x_bounds = ax.get_xlim()
+        mytrans = transforms.blended_transform_factory(ax.transData, ax.transAxes)
+        ax.annotate(text = "AI's Prediction",#: " + r"${\bf " + init_explainer.target_class_name + r"}$", 
+            xy =(max(min((((left_array_graph_value[-1] + \
+                other_features_sum_values)-x_bounds[0])/(x_bounds[1]-x_bounds[0])), 0.95) - 0.1, 0), -0.1), 
+                    xycoords='axes fraction', color=color_prediction, size=label_size+6)
+        nb_features = len(pos_lime_exp) + len(neg_lime_exp) + 1
+        width = 0.5 / len(left_array_graph_value)
+        
+        # Generate the bar indicating the final prediction of the AI model as well as the prediction by the model
+        #plt.axvline(round(left_array_graph_value[-1] + other_features_sum_values, 2), ymin=0.01, color="black", linewidth=4)
+        ax.arrow(min(max(0, round(left_array_graph_value[-1] + other_features_sum_values, 2)), 1), 1, 0, -1.02, transform=mytrans, head_width=0.0, head_length=0.0, 
+                length_includes_head=True, color="black", clip_on=False, alpha=0.5, width=0.005, linestyle='')
+        try:
+            for i, left_value in enumerate(left_array_graph_value):
+                #print("y", 1 - (i+1)*1/nb_features + 0.07)
+                if i >= len(pos_lime_exp):
+                    #print("neg value", -(left_array_graph_value[i+1]-left_value))
+                    ax.arrow(left_value, 1 - (i+1)*1/nb_features + width, left_array_graph_value[i+1]-left_value, 0, transform=mytrans, head_width=width,#1/nb_features, 
+                        head_length=min(0.02, -(left_array_graph_value[i+1]-left_value)), length_includes_head=True, color="blue", width=width)#clip_on=False, width=width)
+                else:
+                    ax.arrow(left_value, 1 - (i+1)*1/nb_features + width, left_array_graph_value[i+1]-left_value, 0, transform=mytrans, head_width=width,#1/nb_features, 
+                        head_length=min(0.02, left_array_graph_value[i+1]-left_value), length_includes_head=True, color="red", clip_on=False, width=width)
+        except:
+            if other_features_sum_values < 0:
+                ax.arrow(left_array_graph_value[-1], width, round(other_features_sum_values, 2), 0, transform=mytrans, head_width=width,#1/nb_features, 
+                    head_length=min(0.02, -round(other_features_sum_values, 2)), length_includes_head=True, color="blue", width=width)#clip_on=False, width=width)
+            else:
+                ax.arrow(left_array_graph_value[-1], width, round(other_features_sum_values, 2), 0, transform=mytrans, head_width=width,#1/nb_features, 
+                    head_length=min(0.02, round(other_features_sum_values, 2)), length_includes_head=True, color="red", width=width)#clip_on=False, width=width)
+        # Display negative features from lime exp
         ax.barh(np.arange(1, len(neg_lime_exp) + 1), [x[2] for x in reversed(neg_lime_exp)], \
                 left=left_array_graph_value[len(pos_lime_exp): len(pos_lime_exp) + len(neg_lime_exp)][::-1], 
-                    color="Blue", alpha=1)
+                    color="Blue", alpha=0)
+
         # Generate the y labels with question and answers from the user
         ax.set_yticks(np.arange(len(pos_lime_exp) + len(neg_lime_exp) + 1), labels=labels, size=label_size)
         

@@ -64,8 +64,8 @@ def generate_dataset(dataset_name, multiclass=False):
             categorical_values.append(tab)
         class_names = ['Underweight', 'Obese']
         x_data = x_data.values
-        feature_transformations = {0: sex_map, 3: binary_map, 4: binary_map, 5: vegetable_map, 6: main_meal_map, 
-                7: caec_map, 8: binary_map, 9: water_map, 10: binary_map, 11: physical_map, 12: smartphone_map, 13: caec_map, 14: mtrans_map}
+        feature_transformations = {0: sex_map, 3: inverse_binary_map, 4: inverse_binary_map, 5: vegetable_map, 6: main_meal_map, 
+                7: caec_map, 8: inverse_binary_map, 9: water_map, 10: inverse_binary_map, 11: physical_map, 12: smartphone_map, 13: caec_map, 14: mtrans_map}
         modify_feature_name = modify_obesity_feature()
     
     elif 'compas' in dataset_name:
@@ -85,7 +85,7 @@ def generate_dataset(dataset_name, multiclass=False):
                 tab.insert(0, 0)
             categorical_values.append(tab)
 
-        class_names = ['Recidiv', 'Vanish']
+        class_names = ['Vanish', 'Recidiv']
         transformations = dataset.transformations
 
         def race_transformation(target):
@@ -96,10 +96,10 @@ def generate_dataset(dataset_name, multiclass=False):
 
         def charge_degree_map_transformation(target):
             try:
-                return "minor offences" if str(dataset.charge_degree_map[target]) == "M" else "major offences"
+                return "minor offenses" if str(dataset.charge_degree_map[target]) == "M" else "major offenses"
                 #return str(dataset.charge_degree_map[target])
             except KeyError:
-                return "minor offences" if target == "M" else "major offences"
+                return "minor offenses" if target == "M" else "major offenses"
                 #return target
                     
         def charge_desc_map_transformation(target):
@@ -303,6 +303,10 @@ def binary_map(target_value):
     target_value = int(float(target_value))
     return "Yes" if target_value == 0 else "No" 
 
+def inverse_binary_map(target_value):
+    target_value = int(float(target_value))
+    return "No" if target_value == 0 else "Yes" 
+
 def caec_map(target_value):
     target_value = int(float(target_value))
     if target_value == 0:
@@ -398,9 +402,9 @@ def modify_compas_feature():
     feature_name_replacement['sex'] = ['Gender', 0]
     feature_name_replacement['age'] = ['Age', 1]
     feature_name_replacement['race'] = ['Race', 2]
-    feature_name_replacement['juv_fel_count'] = ['Number of juvenile major offences', 3] # nombre de crimes
+    feature_name_replacement['juv_fel_count'] = ['Number of juvenile major offenses', 3] # nombre de crimes
     #feature_name_replacement['decile_score'] = ['Decile Score', 4]
-    feature_name_replacement['juv_misd_count'] = ['Number of juvenile minor offences', 4] # nombre de délits
+    feature_name_replacement['juv_misd_count'] = ['Number of juvenile minor offenses', 4] # nombre de délits
     #feature_name_replacement['juv_other_count'] = ['juv other count', 6]
     feature_name_replacement['priors_count'] = ['Number of previous arrest', 5] # Nombre d'antécédents
     #feature_name_replacement['days_b_screening_arrest'] = ['days_b_screening_arrest', 8] 
@@ -415,7 +419,7 @@ def modify_compas_feature():
     return feature_name_replacement
     
 def transform_target_class(prediction, class_names):
-    compas = "Recidiv" in class_names[0]
+    compas = "Recidiv" in class_names[1]
     if compas:
         if prediction < 0.25:
             return "No Risk"

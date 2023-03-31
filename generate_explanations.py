@@ -16,19 +16,20 @@ if __name__ == "__main__":
     # Datasets used for the experiments 
     dataset_names = ["compas"]#"obesity"]#"blood"]#"adult"]#"mortality"]#"heart"]#diabetes"]#"adult"]#"compas"]#"cancer"]#"titanic"]#
     
-    models = [#GaussianNB(),
+    models = [#LogisticRegression(fit_intercept=True, random_state=1),
+                #GaussianNB(),
                 #GradientBoostingClassifier(n_estimators=20, learning_rate=1.0, random_state=1),
                 MLPClassifier(random_state=1, activation='logistic'),
-                #RandomForestClassifier(n_estimators=20, random_state=1), 
-                svm.SVC(probability=True, random_state=1, class_weight="balanced"),
-                VotingClassifier(estimators=[('lr', LogisticRegression()), ('gnb', GaussianNB()), ('svm', svm.SVC(probability=True))], voting='soft')#('rc', RidgeClassifier())], voting="soft"),
+                #RandomForestClassifier(n_estimators=10, random_state=1), 
+                #svm.SVC(probability=True, random_state=1, class_weight="balanced"),
+                #VotingClassifier(estimators=[('lr', LogisticRegression()), ('gnb', GaussianNB()), ('svm', svm.SVC(probability=True))], voting='soft')#('rc', RidgeClassifier())], voting="soft"),
                 ]
 
     # Number of instances explained by each model on each dataset
     max_instance_to_explain = 75
     """ All the variable necessaries for generating the graph results """
     # Store results inside graph if set to True
-    graph = True
+    graph = False
     verbose = False
     growing_sphere = False
     growing_method = "GS" if growing_sphere else "GF"
@@ -38,7 +39,7 @@ if __name__ == "__main__":
     # Threshold for explanation method precision
     threshold_interpretability = 0.95
     linear_separability_index = 1
-    linear_model = Ridge(alpha=0)#SGDRegressor()#LinearRegression()#
+    linear_model = Ridge(alpha=1, fit_intercept=True, random_state=1)#Ridge(alpha=0)#SGDRegressor()#LinearRegression()#
     linear_model_name = type(linear_model).__name__ + "_" if "Ridge" not in type(linear_model).__name__ else ""
 
     # Initialize all the variable needed to store the result in graph
@@ -49,7 +50,9 @@ if __name__ == "__main__":
                     feature_names, transformations, dataframe, feature_transformations, modify_feature_name, lime_feature_name = generate_dataset(dataset_name)
         
         print(dataframe.head())
-
+        print(continuous_features, len(continuous_features))
+        print(categorical_features, len(categorical_features))
+        print(len(x))
         for nb_model, black_box in enumerate(models):
             model_name = type(black_box).__name__
             models_name.append(model_name)
@@ -76,7 +79,9 @@ if __name__ == "__main__":
             temp_counterfactuals, temp_rules = pd.DataFrame(columns=counterfactuals_columns), pd.DataFrame()#[], []
 
             for instance_to_explain, label in zip(x_test, y_test):
-                if label != black_box.predict(instance_to_explain.reshape(1, -1))[0]:
+                print(black_box.predict_proba(instance_to_explain.reshape(1, -1))[0])
+                proba_healthy = black_box.predict_proba(instance_to_explain.reshape(1, -1))[0][0] > 0.5 #and black_box.predict_proba(instance_to_explain.reshape(1, -1))[0][0] < 0.75
+                if label != black_box.predict(instance_to_explain.reshape(1, -1))[0] or not proba_healthy:
                     continue
                 if cnt == max_instance_to_explain:
                     break
@@ -111,7 +116,7 @@ if __name__ == "__main__":
                     
 
                     # LIME visualisation
-                    lime_rule = '\n'.join(map(str, lime.as_list()))
+                    lime_rule = '\n'.join(map(str, lime.as_list(label)))
                     pos_lime_exp, neg_lime_exp, other_features_sum_values = visualisation_explanation.generate_linear_text_explanation(lime_normalised, 
                                                 modify_feature_name, filename_per_instance, instance_to_explain.copy(), categorical_features, feature_transformations, 
                                                 sum_coef_lime, explainers)
