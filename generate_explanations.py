@@ -29,18 +29,9 @@ if __name__ == "__main__":
     max_instance_to_explain = 75
     """ All the variable necessaries for generating the graph results """
     # Store results inside graph if set to True
-    graph = False
     verbose = False
-    growing_sphere = False
-    growing_method = "GS" if growing_sphere else "GF"
-    distance_metric = "mahalanobis"
 
     visualisation_explanation = VisualisationExplanation()
-    # Threshold for explanation method precision
-    threshold_interpretability = 0.95
-    linear_separability_index = 1
-    linear_model = Ridge(alpha=1, fit_intercept=True, random_state=1)#Ridge(alpha=0)#SGDRegressor()#LinearRegression()#
-    linear_model_name = type(linear_model).__name__ + "_" if "Ridge" not in type(linear_model).__name__ else ""
 
     # Initialize all the variable needed to store the result in graph
     for dataset_name in dataset_names:
@@ -67,13 +58,12 @@ if __name__ == "__main__":
             cnt = 0
                 
             explainers = InitExplainers(x_train, class_names, black_box.predict, black_box.predict_proba,
-                                                            growing_method=growing_method,
+                                                            growing_method="GF",
                                                             continuous_features=continuous_features,
                                                             categorical_features=categorical_features, categorical_values=categorical_values, 
                                                             feature_names=feature_names, categorical_names=categorical_names,
-                                                            verbose=verbose, threshold_precision=threshold_interpretability,
-                                                            linear_separability_index=linear_separability_index, 
-                                                            transformations=transformations, feature_transformations=feature_transformations)
+                                                            transformations=transformations, 
+                                                            feature_transformations=feature_transformations)
             counterfactuals_columns = dataframe.columns 
             counterfactuals_columns += 'target'
             temp_counterfactuals, temp_rules = pd.DataFrame(columns=counterfactuals_columns), pd.DataFrame()#[], []
@@ -98,8 +88,7 @@ if __name__ == "__main__":
                     filename_per_instance = "./results/" + dataset_name + "/" + model_name + "/" + str(cnt) + "/"
                     explainers.filename = filename_per_instance
                     anchor_exp, lime, closest_counterfactual, local_surrogate = explainers.predict(instance_to_explain, 
-                                                                                linear_model=linear_model, 
-                                                                                distance_metric=distance_metric,
+                                                                                distance_metric="mahalanobis",
                                                                                 nb_features_employed=None)#6)
 
                     lime_normalised, sum_coef_lime = visualisation_explanation.normalize_linear_explanation(lime, black_box.predict_proba(instance_to_explain.reshape(1, -1))[0][1])
@@ -120,7 +109,6 @@ if __name__ == "__main__":
                     pos_lime_exp, neg_lime_exp, other_features_sum_values = visualisation_explanation.generate_linear_text_explanation(lime_normalised, 
                                                 modify_feature_name, filename_per_instance, instance_to_explain.copy(), categorical_features, feature_transformations, 
                                                 sum_coef_lime, explainers)
-                                                #black_box.predict_proba(instance_to_explain.reshape(1, -1))[0][1], explainers)
                     visualisation_explanation.generate_linear_image_explanation(pos_lime_exp, neg_lime_exp, filename_per_instance, explainers, other_features_sum_values)
                     
                     visualisation_explanation.generate_target_instance_array(explainers, modify_feature_name, filename_per_instance, instance_to_explain)
@@ -134,12 +122,6 @@ if __name__ == "__main__":
                     # Anchors representation
                     anchor_rule = visualisation_explanation.generate_anchor_image(anchor_exp, modify_feature_name, categorical_features, feature_transformations, \
                                                                                 filename_per_instance, explainers)
-
-                    """print(anchor_exp.names())
-                    print("and the associate precision for each sub rule:")
-                    print(anchor_exp.exp_map['precision'])"""
-
-
 
                     local_surrogate_rule = '\n'.join(map(str, local_surrogate.as_list()))
                     explanations_rule = pd.DataFrame({'anchor':anchor_rule, 'lime':lime_rule, 'local surrogate':local_surrogate_rule, \
