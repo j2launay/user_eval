@@ -1,39 +1,33 @@
-from sklearn.datasets import make_circles, make_moons, make_blobs, load_breast_cancer
-from sklearn.decomposition import PCA
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 import utils
 import numpy as np
 import pandas as pd
 
-def preparing_dataset(x, y):
-    # Split the data inside a test and a train set (70% train and 30% test)
-    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3, random_state=10)
-    return x_train, x_test, y_train, y_test
+def generate_dataset(dataset_name):
+    """Function to store the data and all the information about the dataset and features 
 
-def generate_dataset(dataset_name, multiclass=False):
+    Args:
+        dataset_name (string): name of the dataset
+
+    Returns:
+        x_data: data
+        y_data: labels of the data
+        dataframe: pandas dataframe
+        class_names: array of string corresponding to the names of the label
+        continuous_features, categorical_features: array of int indicating the position
+                                of the features with continuous or categorical features
+        categorical_values: array of the possible values (integer) for each categorical feature
+        categorical_names: dict of the original values (string) for each categorical feature
+        feature_names: array of the name of the features 
+        transformations, feature_transformations: functions used to modify the feature values 
+        modify_feature_name: function to get back to the original value of categorical features
+    """
     # Function used to get dataset depending on the dataset name
-    regression = False
-    class_names, continuous_features = None, None 
-    categorical_features, categorical_values, lime_features_name = [], [], []
-    categorical_names, modify_feature_name = {}, {}
-    transformations, dataframe = None, None
+    class_names, transformations, dataframe = None, None, None
+    categorical_values, categorical_names, modify_feature_name = [], {}, {}
     
-    if "adult" in dataset_name:
-        dataset = utils.load_dataset("adult", balance=False, discretize=False, dataset_folder="./dataset/")
-        x_data, y_data = dataset.train, dataset.labels_train
-        categorical_features = dataset.categorical_features
-        tab = [i for i in range(len(dataset.train[0]))]
-        categorical_values =[]
-        for features in categorical_features:
-            tab = [i for i in range(len(dataset.categorical_names[features]))]
-            categorical_values.append(tab)
-        class_names = ['Less than $50,000', 'More than $50,000']
-        categorical_names = dataset.categorical_names
-        transformations = dataset.transformations
-    
-    elif "obesity" in dataset_name:
-        dataset = pd.read_csv("./dataset/obesity/obesity.csv")
+    if "obesity" in dataset_name:
+        dataset = pd.read_csv("./dataset/obesity.csv")
         try:
             dataset.drop(['Unnamed: 0'], axis=1, inplace=True)
         except KeyError:
@@ -41,7 +35,6 @@ def generate_dataset(dataset_name, multiclass=False):
         x_data = dataset.loc[:, dataset.columns != 'NObeyesdad']
         y_data = dataset.iloc[:,-1].values
         feature_names = dataset.columns[:-1]
-        lime_features_name = []
         categorical_features = [0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
         tab = [i for i in range(len(x_data.iloc[0]))]
         categorical_values =[]
@@ -64,8 +57,10 @@ def generate_dataset(dataset_name, multiclass=False):
             categorical_values.append(tab)
         class_names = ['Underweight', 'Obese']
         x_data = x_data.values
-        feature_transformations = {0: sex_map, 3: inverse_binary_map, 4: inverse_binary_map, 5: vegetable_map, 6: main_meal_map, 
-                7: caec_map, 8: inverse_binary_map, 9: water_map, 10: inverse_binary_map, 11: physical_map, 12: smartphone_map, 13: caec_map, 14: mtrans_map}
+        feature_transformations = {0: sex_map, 3: inverse_binary_map, 4: inverse_binary_map, 
+                                   5: vegetable_map, 6: main_meal_map, 7: caec_map, 
+                                   8: inverse_binary_map, 9: water_map, 10: inverse_binary_map, 
+                                   11: physical_map, 12: smartphone_map, 13: caec_map, 14: mtrans_map}
         modify_feature_name = modify_obesity_feature()
     
     elif 'compas' in dataset_name:
@@ -74,7 +69,7 @@ def generate_dataset(dataset_name, multiclass=False):
         x_data, y_data = dataset.train, dataset.labels_train
         categorical_features = dataset.categorical_features
         tab = [i for i in range(len(dataset.train[0]))]
-        categorical_names = dataset.categorical_names#
+        categorical_names = dataset.categorical_names
         categorical_values =[]
         for feature in categorical_features:
             try:
@@ -112,154 +107,29 @@ def generate_dataset(dataset_name, multiclass=False):
             return str(target)
 
         feature_transformations = {0: sex_map, 2:race_transformation, 
-                3:temp_dont_change, 4:temp_dont_change, 5:temp_dont_change, 6:charge_degree_map_transformation, 7:charge_desc_map_transformation}
+                                   3:temp_dont_change, 4:temp_dont_change, 
+                                   5:temp_dont_change, 6:charge_degree_map_transformation, 
+                                   7:charge_desc_map_transformation}
         modify_feature_name = modify_compas_feature()
 
-    elif "heart" in dataset_name:
-        dataset = pd.read_csv("./dataset/heart/heart.csv")
-        x_data = dataset.loc[:, dataset.columns != 'target']
-        y_data = dataset.iloc[:,-1].values
-        feature_names = dataset.columns[:-1]
-        categorical_features = [1, 2, 5, 6, 8, 10, 11, 12]
-        tab = [i for i in range(len(x_data.iloc[0]))]
-        categorical_values =[]
-
-        categorical_names = {}
-        for feature in categorical_features:
-            le = LabelEncoder()
-            le.fit(x_data.iloc[:, feature])
-            x_data.iloc[:, feature] = le.transform(x_data.iloc[:, feature])
-            categorical_names[feature] = [str(x) for x in le.classes_]
-
-        for features in categorical_features:
-            try:
-                tab = list(set(x_data.iloc[:,features]))
-            except ValueError:
-                tab = [i for i in range(len(categorical_names[features]))]
-            if not 0 in tab:
-                tab.insert(0, 0)
-            categorical_values.append(tab)
-        class_names = ['Healthy', 'Disease']
-        x_data = x_data.values
-
-    elif "titanic" in dataset_name:
-        dataset = utils.load_dataset("titanic", balance=False, discretize=False, dataset_folder="./dataset/")
-        x_data, y_data = dataset.train, dataset.labels_train
-        categorical_features = dataset.categorical_features
-        tab = [i for i in range(len(dataset.train[0]))]
-        categorical_values =[]
-        for features in categorical_features:
-            try:
-                tab = list(set(x_data[:,features]))
-            except ValueError:
-                tab = [i for i in range(len(dataset.categorical_names[features]))]
-            if not 0 in tab:
-                tab.insert(0, 0)
-            categorical_values.append(tab)
-        class_names = ['Survive', 'Died']
-        categorical_names = dataset.categorical_names
-        transformations = dataset.transformations
-    
-    elif "cancer" in dataset_name:
-        dataset = load_breast_cancer()
-        x_data, y_data = dataset.data, dataset.target
-        dataframe = pd.DataFrame(x_data, columns=dataset.feature_names)
-        class_names = dataset.target_names
-
-    elif "blood" in dataset_name:
-        dataset = utils.load_dataset("blood", balance=True, discretize=False, dataset_folder="./dataset/")
-        x_data, y_data = dataset.train, dataset.labels_train
-        
-        # Code to balance dataset
-        idxs = np.array([], dtype='int')
-        min_labels = np.min(np.bincount(y_data))
-        for label in np.unique(y_data):
-            idx = np.random.choice(np.where(y_data == label)[0], min_labels)
-            idxs = np.hstack((idxs, idx))
-        x_data = x_data[idxs]
-        y_data = y_data[idxs]
-        
-        class_names = ['Donating', 'Not donating']
-    
-    elif "diabetes" in dataset_name:
-        dataset = utils.load_dataset("diabetes", balance=False, discretize=False, dataset_folder="./dataset/")
-        x_data, y_data = dataset.train, dataset.labels_train
-        class_names = ['Tested Positive', 'Tested Negative']
-
-    elif "categorical_generate_blobs" in dataset_name:
-        x_data, y_data = make_blobs(5000, n_features=8, random_state=0, centers=2, cluster_std=5)
-        class_names = ['class ' + str(Y) for Y in range(len(set(y_data)))]
-        categorical_features = np.random.randint(0,8,(4))
-        categorical_features = list(set(categorical_features))
-        while len(set(categorical_features)) < 4:
-            categorical_features.append(np.random.randint(0,len(x_data[0])))
-            categorical_features = list(set(categorical_features))
-        for cat_feature in categorical_features:
-            x_data[:,cat_feature] = np.digitize(x_data[:,cat_feature],bins=[np.mean(x_data[:,cat_feature])])
-        categorical_values = []
-        for i in categorical_features:
-            tab = [0,1]
-            categorical_values.append(tab)
-        categorical_names = {}
-        for key, value in zip(categorical_features, categorical_values):
-            categorical_names[str(key)] = value
-    
-    elif "mega_generate_blobs" in dataset_name:
-        x_data, y_data = make_blobs(7500, n_features=20, random_state=0, centers=2, cluster_std=5)
-        class_names = ['class ' + str(Y)  for Y in range(len(set(y_data)))]
-        multiclass = True
-
-    elif "blobs" in dataset_name:
-        x_data, y_data = make_blobs(5000, n_features=12, random_state=0, centers=2, cluster_std=5)
-        class_names = ['class ' + str(Y)  for Y in range(len(set(y_data)))]
-        multiclass = True
-    
-    elif "blob" in dataset_name:
-        x_data, y_data = make_blobs(1000, n_features=2, random_state=0, centers=2, cluster_std=1)
-        class_names = ['class ' + str(Y)  for Y in range(len(set(y_data)))]
-        multiclass = False
-    
-    elif "circles" in dataset_name:
-        x_data, y_data = make_circles(n_samples=1000, noise=0.05, random_state=0)
-        class_names = ['class ' + str(Y)  for Y in range(len(set(y_data)))]
-
-    elif "mortality" in dataset_name:
-        dataset = utils.load_dataset("mortality", balance=False, discretize=False, dataset_folder="./dataset/")
-        x_data, y_data = dataset.train, dataset.labels_train
-        continuous_features, categorical_features = dataset.continuous_features, dataset.categorical_features
-        categorical_names, categorical_values = dataset.categorical_names, dataset.categorical_values
-        class_names = dataset.class_names
-        feature_names = dataset.feature_names
-
     else:
-        # By default the dataset chosen is generate_moons
-        dataset_name = "generate_moons"
-        x_data, y_data = make_moons(2000, noise=0.2, random_state=0)
-        class_names = ['class ' + str(Y)  for Y in range(len(set(y_data)))]
-    
-    if "generate" in dataset_name or "artificial" in dataset_name:
-        if "blobs" in dataset_name:
-            alphabet = ["a", "b", "c", "d", "e", "f","g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"]
-            feature_names = alphabet[:len(x_data[0])]
-        else:
-            feature_names = ["x", "y"]
-    elif "obesity" not in dataset_name and "heart" not in dataset_name:
+        raise("The dataset chosen is not correct")
+        
+    if "obesity" not in dataset_name:
         feature_names = dataset.feature_names
     
-    if categorical_features != []:
-        continuous_features = [x for x in range(len(x_data[0])) if x not in categorical_features]
-    else:
-        continuous_features = [x for x in range(len(x_data[0]))]
+    continuous_features = [x for x in range(len(x_data[0])) if x not in categorical_features]
 
     if dataframe is None:
         dataframe = pd.DataFrame(x_data, columns=feature_names)
-
-
-    return x_data, y_data, class_names, regression, multiclass, continuous_features, categorical_features, categorical_values, \
-                categorical_names, feature_names, transformations, dataframe, feature_transformations, modify_feature_name, lime_features_name
+        
+    return x_data, y_data, class_names, continuous_features, \
+        categorical_features, categorical_values, categorical_names, \
+            feature_names, transformations, dataframe, feature_transformations, \
+                modify_feature_name
 
 def prepare_obesity_dataset():
-    obesity = pd.read_csv("./dataset/obesity/obesity_original.csv")
+    obesity = pd.read_csv("./dataset/obesity_original.csv")
     to_modify = {}
     binary_columns = ['family_history_with_overweight', 'FAVC', 'SMOKE','SCC']
     for binary_column in binary_columns:
@@ -269,19 +139,13 @@ def prepare_obesity_dataset():
     to_modify['CALC'] = [['no', 'Sometimes', 'Frequently', 'Always'], [0, 1, 2, 3]]
     to_modify['MTRANS'] = [['Walking', 'Bike', 'Public_Transportation', 'Automobile', 'Motorbike'], [0, 1, 2, 3, 4]]
 
-    target = [['Insufficient_Weight', 'Normal_Weight', 'Overweight_Level_I', 'Overweight_Level_II', 'Obesity_Type_I', 'Obesity_Type_II', 'Obesity_Type_III'], \
+    target = [['Insufficient_Weight', 'Normal_Weight', 'Overweight_Level_I', \
+        'Overweight_Level_II', 'Obesity_Type_I', 'Obesity_Type_II', 'Obesity_Type_III'], \
         [0, 0, 0, 0, 1, 1, 1]]
     obesity = replace_value_from_dict(obesity, to_modify)
     obesity = replace_target_value_to_binary(obesity, target)
     obesity.drop(['Weight'], axis=1, inplace=True)
-    obesity.to_csv("./dataset/obesity/obesity.csv")
-
-def prepare_heart_dataset():
-    heart = pd.read_csv("./dataset/heart/heart_with_na_columns.csv")
-    heart.columns = heart.columns.str.replace(' ','')
-    heart.drop(['ca', 'thal'], axis=1, inplace=True)
-    heart.drop([''])
-    heart.to_csv("./dataset/heart/heart.csv")
+    obesity.to_csv("./dataset/obesity.csv")
 
 def replace_value_from_dict(dataframe, dictionnaire):
     for cle in dictionnaire.keys():
@@ -403,19 +267,10 @@ def modify_compas_feature():
     feature_name_replacement['age'] = ['Age', 1]
     feature_name_replacement['race'] = ['Race', 2]
     feature_name_replacement['juv_fel_count'] = ['Number of juvenile major offenses', 3] # nombre de crimes
-    #feature_name_replacement['decile_score'] = ['Decile Score', 4]
     feature_name_replacement['juv_misd_count'] = ['Number of juvenile minor offenses', 4] # nombre de délits
-    #feature_name_replacement['juv_other_count'] = ['juv other count', 6]
     feature_name_replacement['priors_count'] = ['Number of previous arrest', 5] # Nombre d'antécédents
-    #feature_name_replacement['days_b_screening_arrest'] = ['days_b_screening_arrest', 8] 
-    #feature_name_replacement['c_days_from_compas'] = ['c_days_from_compas', 9]
     feature_name_replacement['c_charge_degree'] = ['The degree of the charge', 6] # Le degrée d'accusation
     feature_name_replacement['c_charge_desc'] =	['Description of the charge', 7] # Description de la charge
-    #feature_name_replacement['is_recid'] = ['is_recid', 12]
-    #feature_name_replacement['is_violent_recid'] = ['is_violent_recid', 13]
-    #feature_name_replacement['decile_score.1'] = ['decile_score.1', 14]
-    #feature_name_replacement['v_decile_score'] = ['v_decile_score', 15]
-    #feature_name_replacement['priors_count.1'] = ['priors_count.1', 16]
     return feature_name_replacement
     
 def transform_target_class(prediction, class_names):
@@ -440,24 +295,24 @@ def transform_target_class(prediction, class_names):
             return "Obesity"
 
 def prepare_compas_dataset():
-    data = pd.read_csv("./dataset/compas/compas.csv")
+    data = pd.read_csv("./dataset/compas.csv")
 
     try:
-        data.drop(["decile_score", 'juv_other_count', 'days_b_screening_arrest', 'c_days_from_compas', 'is_recid', 'is_violent_recid', 'decile_score.1', 'v_decile_score', 'priors_count.1'], axis=1, inplace=True)
+        data.drop(["decile_score", 'juv_other_count', 'days_b_screening_arrest', 
+                   'c_days_from_compas', 'is_recid', 'is_violent_recid', 'decile_score.1', 
+                   'v_decile_score', 'priors_count.1'], axis=1, inplace=True)
     except KeyError:
         try:
             data.drop(['Unnamed: 0'], axis=1, inplace=True)
         except KeyError:
             print()
     data['two_year_recid'] = np.where(data['two_year_recid']==0, 1, 0)
-    #data.loc[data['priors_count'] == "more than three", 'priors_count'] = 3
-    #data.loc[data['priors_count'] > 2, 'priors_count'] = "3 or more"
     data = data.groupby('c_charge_desc').filter(lambda x : len(x)>4)
     print(data)
-    data.to_csv("./dataset/compas/compas.csv", index=False)
+    data.to_csv("./dataset/compas.csv", index=False)
 
 def generate_compas_charge_description():
-    data = pd.read_csv("./dataset/compas/compas.csv")
+    data = pd.read_csv("./dataset/compas.csv")
     charge_description = set(data['c_charge_desc'].tolist())
     print(charge_description)
     charge_desc_map = {}
@@ -467,7 +322,7 @@ def generate_compas_charge_description():
     return charge_desc_map
 
 def round_obesity_dataset():
-    data = pd.read_csv("./dataset/obesity/obesity.csv")
+    data = pd.read_csv("./dataset/obesity.csv")
     data['FCVC'] = data['FCVC'].round()
     data['NCP'] = data['NCP'].round()
     data['CH2O'] = data['CH2O'].round()
@@ -475,11 +330,10 @@ def round_obesity_dataset():
     data['TUE'] = data['TUE'].round()
     data['Age'] = data['Age'].round()
     data['Height'] = data['Height'].round(2) * 100
-    data.to_csv("./dataset/obesity/obesity.csv", index=False)
+    data.to_csv("./dataset/obesity.csv", index=False)
 
 if __name__ == "__main__":
-    #prepare_heart_dataset()
-    #prepare_obesity_dataset()
-    #prepare_compas_dataset()
+    prepare_obesity_dataset()
+    prepare_compas_dataset()
     generate_compas_charge_description()
-    #round_obesity_dataset()
+    round_obesity_dataset()

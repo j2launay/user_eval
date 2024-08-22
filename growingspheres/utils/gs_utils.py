@@ -2,16 +2,13 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-from scipy.stats import kendalltau
-from sklearn.metrics.pairwise import pairwise_distances
-from random import randrange, randint, choices, uniform, random
-from scipy.stats import multinomial, chi2
+from random import random
+from scipy.stats import chi2
 import scipy as sp
 import pandas as pd
 import math
 
-def distances(x, y, ape, metrics='w_euclidian', dataset=None):
-    
+def distances(x, y, ape, metrics='mahalanobis', dataset=None):
     if metrics == 'mahalanobis':
         distance = 0
         if ape.max_mahalanobis == None:
@@ -21,7 +18,6 @@ def distances(x, y, ape, metrics='w_euclidian', dataset=None):
             df_x['p'] = 1 - chi2.cdf(df_x['mahalanobis'], 3)
             return df_x
         else:
-            #df_x = pd.DataFrame([x, y], columns=ape.feature_names)
             if dataset is not None:
                 df = pd.DataFrame(y, columns=ape.feature_names)
             else:
@@ -29,10 +25,6 @@ def distances(x, y, ape, metrics='w_euclidian', dataset=None):
             df_x = pd.DataFrame([x], columns=ape.feature_names)
             df_x['mahalanobis'] = mahalanobis(x=df_x, data=df[ape.feature_names], max_mahalanobis=ape.max_mahalanobis)
             df_x['p'] = 1 - chi2.cdf(df_x['mahalanobis'], 3)
-            """df_y = pd.DataFrame([y], columns=ape.feature_names)
-            df_y['mahalanobis'] = mahalanobis(x=df_y, data=df[ape.feature_names], max_mahalanobis=ape.max_mahalanobis)
-            df_y['p'] = 1 - chi2.cdf(df_y['mahalanobis'], 3)
-            return abs(df_x['mahalanobis'].item()-df_y['mahalanobis'].item())"""
             return df_x['mahalanobis'].item()
         #calculate p-value for each mahalanobis distance 
         
@@ -48,33 +40,24 @@ def distances(x, y, ape, metrics='w_euclidian', dataset=None):
     distance = distance + same_coordinates_categorical
     distance = distance/x.shape[0]
 
-    if metrics == 'w_manhattan':
-        distance = 0
-        for nb_feature in range(x_continuous.shape[0]):
-            distance += abs(x_continuous[nb_feature] - y_continuous[nb_feature])/(ape.max_features[nb_feature] - ape.min_features[nb_feature])
-        distance = distance + same_coordinates_categorical
-        distance = distance/x.shape[0]
-    else:
-        distance = 0
-        for nb_feature in range(x_continuous.shape[0]):
-            temp_distance = ((x_continuous[nb_feature] - ape.mean_features[nb_feature]) - (y_continuous[nb_feature] - ape.mean_features[nb_feature]))\
-                / ape.feature_variance[continuous_features[nb_feature]]
-            distance += temp_distance * temp_distance
-        distance = math.sqrt(distance)
-        distance += same_coordinates_categorical
-        try:
-            distance = distance/ape.farthest_distance
-        except AttributeError:
-            # la distance au contrefactuelle le plus loin n'est pas encore calculé
-            pass
-        except TypeError:
-            #On passe a une nouvelle instance et la distance max doit être mesurée de nouveau
-            pass
-        except ZeroDivisionError:
-            #print("zero division error")
-            #print("farthest distance", ape.farthest_distance)
-            #print("distance", distance)
-            pass
+    
+    distance = 0
+    for nb_feature in range(x_continuous.shape[0]):
+        temp_distance = ((x_continuous[nb_feature] - ape.mean_features[nb_feature]) - (y_continuous[nb_feature] - ape.mean_features[nb_feature]))\
+            / ape.feature_variance[continuous_features[nb_feature]]
+        distance += temp_distance * temp_distance
+    distance = math.sqrt(distance)
+    distance += same_coordinates_categorical
+    try:
+        distance = distance/ape.farthest_distance
+    except AttributeError:
+        # la distance au contrefactuelle le plus loin n'est pas encore calculé
+        pass
+    except TypeError:
+        #On passe a une nouvelle instance et la distance max doit être mesurée de nouveau
+        pass
+    except ZeroDivisionError:
+        pass
     
     return distance
 
@@ -93,60 +76,6 @@ def mahalanobis(x=None, data=None, cov=None, max_mahalanobis=None):
     if max_mahalanobis != None:
         mahal /= max_mahalanobis
     return mahal.diagonal()
-
-def get_distances(x1, x2, metrics=None, categorical_features=[]):
-    """
-    Function that computes the distance between x1 and x2 based on euclidean metric or l0 norm (sparsity)
-    Args: x1, x2: instances for which we want to compute the distance
-          metrics: 'euclidean' or 'sparsity', variable to select the distance metric used
-          categorical_features: List of features that are categorical
-    Return: A dictionary of the distance between x1 and x2 
-    """
-    # Convert x1 and x2 to instance with only continuous features and instance with categorical feature in order to
-    # measure a distance between the euclidean and the sparsity 
-    continuous_features = [x for x in set(range(len(x1))).difference(categorical_features)]
-    x1_categorical, x2_categorical = x1[categorical_features].reshape(1, -1), x2[categorical_features].reshape(1, -1)
-    x1_continuous, x2_continuous = x1[continuous_features].reshape(1, -1), x2[continuous_features].reshape(1, -1)
-    
-    x1, x2 = x1.reshape(1, -1), x2.reshape(1, -1)
-    # Compute the euclidean distance between x1 and x2
-    euclidean = pairwise_distances(x1, x2)[0][0]
-    # Compute the l0 norm distance between x1 and x2
-    same_coordinates = sum((x1 == x2)[0])
-    
-    euclidean_continuous = pairwise_distances(x1_continuous, x2_continuous)[0][0]
-    same_coordinates_categorical = x1_categorical.shape[1] - sum((x1_categorical == x2_categorical)[0])
-    new_euclidean = euclidean_continuous+same_coordinates_categorical
-    #pearson = pearsonr(x1, x2)[0]
-    #kendall = kendalltau(x1, x2)
-    out_dict = {'euclidean': new_euclidean, #euclidean,
-                'sparsity': x1.shape[1] - same_coordinates#,
-                #'kendall': kendall
-               }
-    return out_dict        
-
-def generate_inside_ball(center, segment, n):
-    """
-    Args:
-        "center" corresponds to the target instance to explain
-        Segment corresponds to the size of the hypersphere
-        n corresponds to the number of instances generated
-        feature_variance: Array of variance for each continuous feature
-    """
-    def norm(v):
-        # For Thibault Laugel
-        v = np.linalg.norm(v, ord=2, axis=1)
-        return v
-    # Just for clarity of display
-    d = center.shape[0]
-    z = np.random.normal(0, 1, (n, d))
-    # Draw uniformaly instances between the value of s egment[0]**d and segment[1]**d with 
-    # d the number of dimension of the instance to explain
-    u = np.random.uniform(segment[0]**d, segment[1]**d, n)
-    r = u**(1/float(d))
-    z = np.array([a * b / c for a, b, c in zip(z, r,  norm(z))])
-    z = z + center
-    return z
 
 def generate_inside_field(center, segment, n, max_features, min_features, feature_variance):
     """
@@ -171,9 +100,6 @@ def generate_inside_field(center, segment, n, max_features, min_features, featur
         k = (12 * variance)**0.5
         a1 = min(y, z - k)
         b1 = a1 + k
-        #a2 = min(y, z + k)
-        #b2 = a2 - k
-        #print("k, a1, b1", variance, a1, b1)
         nb_instances = int (n / 2)
         generated_instances[:nb_instances, feature] = np.random.uniform(a1, b1, nb_instances)
         generated_instances[nb_instances:, feature] = np.random.uniform(-a1, -b1, n-nb_instances)
@@ -182,7 +108,8 @@ def generate_inside_field(center, segment, n, max_features, min_features, featur
     return generated_instances
 
 def generate_categoric_inside_ball(center, segment, percentage_distribution, n, continuous_features, categorical_features, 
-                            categorical_values, min_features, max_features, feature_variance, probability_categorical_feature=None, libfolding=False):
+                            categorical_values, min_features, max_features, feature_variance, 
+                            probability_categorical_feature=None):
     """
     Generate randomly instances inside a field based on the variance of each continuous feature and 
     the maximum of distribution probability of changing a value for categorical feature
@@ -195,12 +122,8 @@ def generate_categoric_inside_ball(center, segment, percentage_distribution, n, 
           categorical_values: Array of arrays containing the values for each categorical feature
           feature_variance: Array of variance for each continuous feature 
           probability_categorical_feature: Distribution probability for each categorical features of each values 
-          libfolding: If set to True generate randomly instances and convert for categorical features 
-                        the categorical values in probability distribution values
     Return: Matrix of n generated instances perturbed randomly around center in the area of the segment based on the data distribution  
     """
-    def norm(v):
-        return np.linalg.norm(v, ord=2, axis=1)
 
     def perturb_continuous_features(continuous_features, n, feature_variance, segment, center, matrix_perturb_instances):
         """
@@ -228,15 +151,11 @@ def generate_categoric_inside_ball(center, segment, percentage_distribution, n, 
         return matrix_perturb_instances
     
     if segment[1] > 1:
-        print("Il y a un problème puisque la distance est supérieure à 1")
-        print("radius", segment)
         segment = list(segment)
         segment[1] = 1
         segment = tuple(segment)
     if percentage_distribution > 100:
         percentage_distribution = 100
-        print("il y a un problème puisque le pourcentage de distribution est supérieur à 100")
-        print("radius", segment)
 
     matrix_perturb_instances = np.zeros((n, len(center)))
     for i in range(len(categorical_features)):
@@ -246,8 +165,6 @@ def generate_categoric_inside_ball(center, segment, percentage_distribution, n, 
         # add for each categorical feature these values to be considered as a probability 
         matrix_perturb_instances[:, categorical_features[i]] = value_libfolding
 
-    if libfolding:
-        matrix_perturb_instances_libfolding = matrix_perturb_instances.copy()
     for nb_categorical_features, categorical_feature in enumerate(categorical_features):
         value_target_instance = center[categorical_feature]
         for nb_instance, artificial_instance in enumerate(matrix_perturb_instances):
@@ -267,12 +184,4 @@ def generate_categoric_inside_ball(center, segment, percentage_distribution, n, 
     
     matrix_perturb_instances = perturb_continuous_features(continuous_features, n, feature_variance, 
                                                             segment, center, matrix_perturb_instances)
-    if libfolding:
-        matrix_perturb_instances_libfolding = perturb_continuous_features(continuous_features, n, 
-                                                                feature_variance, segment, center, 
-                                                                matrix_perturb_instances_libfolding)
-
-    if libfolding:
-        return matrix_perturb_instances, matrix_perturb_instances_libfolding
-    else:
-        return matrix_perturb_instances
+    return matrix_perturb_instances

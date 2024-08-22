@@ -1,14 +1,7 @@
 import pandas as pd
 import numpy as np
-import pingouin as pg
-from scipy import stats
-import scikit_posthocs as sp
-import matplotlib.pyplot as plt
-import seaborn
-import statsmodels.api as sm
-from statsmodels.formula.api import ols
 
-pd.options.mode.chained_assignment = None  # default='warn'
+pd.options.mode.chained_assignment = None
 
 def transform_text_to_int(text):
     if text == "Strongly disagree":
@@ -62,17 +55,15 @@ def ensure_valid_answer(data, dataset_name):
         idx = [x for x in idx[0] if x in idx_first]
         valid_data = valid_data.loc[idx] 
 
-    #valid_data.dropna(axis=0, how='any', thresh=None, subset=None, inplace=True)
     valid_data.dropna(subset=['Q2.2', 'Q2.4'], inplace=True)
     return valid_data
 
 def add_demographic_information(data, dataset_name, local_surrogates, representations):
     data.rename(columns={"PROLIFIC_PID": "Participant id"}, inplace=True)
     try:
-        df1 = pd.read_csv("./user_study/" + dataset_name + "_control.csv")
+        df1 = pd.read_csv("./user_study/demographic_information/" + dataset_name + "_control.csv")
     except FileNotFoundError:
         pass
-    #data = pd.merge(data, df, on = "Participant id")
     for local_surrogate in local_surrogates:
         for representation in representations:
             try:
@@ -111,8 +102,7 @@ def compute_satisfaction(data):
                 "I agree somewhat": 4, "I agree strongly": 5}, inplace=True)
     satisfaction[['QS.1', 'QS.2', 'QS.3', 'QS.4', 'QS.5', 'QS.6', 'QS.7', 'QS.8']] = satisfaction[['QS.1', 'QS.2', 'QS.3', 'QS.4', 'QS.5', 'QS.6', 'QS.7', 'QS.8']].astype('int')
     satisfaction['satisfaction'] = satisfaction[['QS.1', 'QS.2', 'QS.3', 'QS.4', 'QS.5', 'QS.6', 'QS.7', 'QS.8']].mean(numeric_only=True, axis=1)
-    return satisfaction[['QS.1', 'QS.2', 'QS.3', 'QS.4', 'QS.5', 'QS.6', 'QS.7', 'QS.8', 'satisfaction']]#[['satisfaction', 'local_surrogate', 'representation']]
-    #print(satisfaction)
+    return satisfaction[['QS.1', 'QS.2', 'QS.3', 'QS.4', 'QS.5', 'QS.6', 'QS.7', 'QS.8', 'satisfaction']]
 
 def compute_understanding(data):
     understanding = data[['QU.1', 'QU.2', 'QU.3', 'QU.4', 'QU.5', 'QU.6', 'QU.7', 'QU.8', 'local_surrogate', 'representation']]
@@ -121,11 +111,9 @@ def compute_understanding(data):
                 "I agree somewhat": 4, "I agree strongly": 5}, inplace=True)
     understanding[['QU.1', 'QU.2', 'QU.3', 'QU.4', 'QU.5', 'QU.6', 'QU.7', 'QU.8']] = understanding[['QU.1', 'QU.2', 'QU.3', 'QU.4', 'QU.5', 'QU.6', 'QU.7', 'QU.8']].astype('int')
     understanding['understanding'] = understanding[['QU.1', 'QU.2', 'QU.3', 'QU.4', 'QU.5', 'QU.6', 'QU.7', 'QU.8']].mean(numeric_only=True, axis=1)
-    return understanding[['QU.1', 'QU.2', 'QU.3', 'QU.4', 'QU.5', 'QU.6', 'QU.7', 'QU.8', 'understanding']]#[['understanding', 'local_surrogate', 'representation']]
-    #print(understanding)
+    return understanding[['QU.1', 'QU.2', 'QU.3', 'QU.4', 'QU.5', 'QU.6', 'QU.7', 'QU.8', 'understanding']]
 
 def compute_behavioral_understanding(data, dataset_name):
-    # TODO evaluer pour Control group
     if dataset_name == "Obesity":
         linear_q1_solution = ['Family member has overweight', 'Consumption of food between meals', 'Frequent consumption of high caloric food', 'Transportation used', 'Calories consumption monitoring']
         linear_q2_solution = ['Family member has overweight', 'Frequent consumption of high caloric food']
@@ -139,10 +127,6 @@ def compute_behavioral_understanding(data, dataset_name):
         cf_q2_solution = ['Physical activity frequency']
         cf_q3_solution = ['Family member has overweight']
         cf_q4_solution = ['Family member has overweight', "Physical activity frequency"]
-        #control_solution_q1 = ['Family member has overweight', 'Consumption of food between meals', 'Frequent consumption of high caloric food', 'Transportation used', 'Calories consumption monitoring', 'Age', 'Gender', 'Consumption of alcohol', 'Physical activity frequency' ]
-        #control_solution_q2 = ['Family member has overweight', 'Frequent consumption of high caloric food', 'Age', 'Consumption of alcohol', 'Physical activity frequency']
-        #control_solution_q3 = ['Family member has overweight', 'Consumption of food between meals', 'Frequent consumption of high caloric food', 'Frequency of consumption of vegetables', 'Calories consumption monitoring', 'Age', 'Physical activity frequency']
-        #control_solution_q4 = ['Consumption of food between meals', 'Frequent consumption of high caloric food', 'Age', 'Calories consumption monitoring', 'Age', 'Height', 'Consumption of daily water', "Physical activity frequency"]
         linear_q1_top_solution = ['Family member has overweight']
         linear_q2_top_solution = ['Family member has overweight']
         linear_q3_top_solution = ['Family member has overweight']
@@ -155,10 +139,6 @@ def compute_behavioral_understanding(data, dataset_name):
         cf_q2_top_solution = ['Physical activity frequency']
         cf_q3_top_solution = ['Family member has overweight']
         cf_q4_top_solution = ['Family member has overweight']
-        #control_q1_top_solution = ['Calories consumption monitoring']
-        #control_q2_top_solution = ['Family member has overweight']
-        #control_q3_top_solution = ['Family member has overweight']
-        #control_q4_top_solution = ['Age']
     else:
         linear_q1_solution = ['Number of previous arrest', 'Number of juvenile minor offenses']
         linear_q2_solution = ['Number of juvenile minor offenses', 'Age', 'Number of previous arrest']
@@ -172,10 +152,6 @@ def compute_behavioral_understanding(data, dataset_name):
         cf_q2_solution = ['Number of previous arrest', 'The degree of the charge']
         cf_q3_solution = ['Number of previous arrest', 'The degree of the charge']
         cf_q4_solution = ['Number of previous arrest', 'Number of juvenile major offenses']
-        #control_solution_q1 = ['Number of previous arrest', 'Number of juvenile minor offenses', 'Age']
-        #control_solution_q2 = ['Number of juvenile minor offenses', 'Age', 'Number of previous arrest', 'The degree of the charge', 'Description of the charge']
-        #control_solution_q3 = ['Number of previous arrest', 'The degree of the charge', 'Race', 'Gender', 'Description of the charge']
-        #control_solution_q4 = ['Number of juvenile minor offenses', 'Age', 'Number of previous arrest', 'Number of juvenile major offenses']
         linear_q1_top_solution = ['Number of previous arrest']
         linear_q2_top_solution = ['Number of juvenile minor offenses']
         linear_q3_top_solution = ['Number of previous arrest']
@@ -188,10 +164,6 @@ def compute_behavioral_understanding(data, dataset_name):
         cf_q2_top_solution = ['Number of previous arrest']
         cf_q3_top_solution = ['Number of previous arrest']
         cf_q4_top_solution = ['Number of previous arrest']
-        #control_q1_top_solution = ['']
-        #control_q2_top_solution = ['']
-        #control_q3_top_solution = ['']
-        #control_q4_top_solution = ['']
 
     linear_group = data.loc[data['local_surrogate'] == 0]
     rule_group = data.loc[data['local_surrogate'] == 1]
@@ -218,15 +190,9 @@ def compute_behavioral_understanding(data, dataset_name):
     def compute_understanding(answers, solutions, control=False):
         precision_users, recall_users = [], []
         if control:
-            print("answers")
-            print(answers)
-            print("solution") 
-            print(solutions)
             for i, answer in enumerate(answers):
-                print(i, answer)
                 temp_recall_users, temp_precision_users = [], []
                 for solution in solutions:
-                    print(solution)
                     answer_split = answer.split(",")
                     temp_score = 0
                     for answer_temp in answer_split:
@@ -235,8 +201,6 @@ def compute_behavioral_understanding(data, dataset_name):
                     temp_recall_users.append(temp_score/len(solution))
                 precision_users.append(np.mean(temp_precision_users))
                 recall_users.append(np.mean(temp_recall_users))
-            print("precision", precision_users, solutions)
-            #print(answers)
         else:
             for answer in answers:
                 answer_split = answer.split(",")
@@ -256,8 +220,6 @@ def compute_behavioral_understanding(data, dataset_name):
                     if solution[0] in answer:
                         temp_score += 1
                 score.append(temp_score/len(solutions))
-            print("score", score, solutions)
-            #print(answers)
         else:
             for answer in answers:
                 if solutions[0] in answer:
@@ -363,6 +325,7 @@ def compute_behavioral_trust(data, dataset_name):
             q2_ordinal.append(compute_increased_trust(second_prediction, second_prediction_after_xai, second_linear_ai_prediction))
             q3_ordinal.append(compute_increased_trust(third_prediction, third_prediction_after_xai, third_linear_ai_prediction))
             q4_ordinal.append(compute_increased_trust(fourth_prediction, fourth_prediction_after_xai, fourth_linear_ai_prediction))
+            
         else:
             q1.append(compute_trust(first_prediction, first_prediction_after_xai, first_ai_prediction))
             q2.append(compute_trust(second_prediction, second_prediction_after_xai, second_ai_prediction))
@@ -373,6 +336,7 @@ def compute_behavioral_trust(data, dataset_name):
             q2_ordinal.append(compute_increased_trust(second_prediction, second_prediction_after_xai, second_ai_prediction))
             q3_ordinal.append(compute_increased_trust(third_prediction, third_prediction_after_xai, third_ai_prediction))
             q4_ordinal.append(compute_increased_trust(fourth_prediction, fourth_prediction_after_xai, fourth_ai_prediction))
+            
 
     data['Q1 b trust'], data['Q2 b trust'], data['Q3 b trust'], data['Q4 b trust'] = q1, q2, q3, q4
     data['Q1 b ord trust'], data['Q2 b ord trust'], data['Q3 b ord trust'], data['Q4 b ord trust'] = q1_ordinal, q2_ordinal, q3_ordinal, q4_ordinal
@@ -381,21 +345,69 @@ def compute_behavioral_trust(data, dataset_name):
 
 def compute_increased_trust(data):
     q1, q2, q3, q4 = [], [], [], []
+    q1_s, q2_s, q3_s, q4_s = [], [], [], []
+    q1_d, q2_d, q3_d, q4_d = [], [], [], []
+    
+    if dataset_name == "Obesity":
+        first_ai_prediction, second_ai_prediction, third_ai_prediction, fourth_ai_prediction = 'Healthy', 'Overweight', 'Obesity', 'Underweight'
+        first_linear_ai_prediction, second_linear_ai_prediction, third_linear_ai_prediction, fourth_linear_ai_prediction = 'Underweight', 'Overweight', 'Obesity', 'Healthy'
+    else:
+        first_ai_prediction, second_ai_prediction, third_ai_prediction, fourth_ai_prediction = 'High risk', 'No risk', 'Medium risk', 'Low risk'
+        first_linear_ai_prediction, second_linear_ai_prediction, third_linear_ai_prediction, fourth_linear_ai_prediction = 'High risk', 'No risk', 'Medium risk', 'Low risk'
+    
     def compute_increased_trust_ind(first_confidence, first_confidence_after_xai):
         first, second = transform_text_to_int(first_confidence), transform_text_to_int(first_confidence_after_xai)
         return second - first
 
     for index, row in data.iterrows():
+        first_prediction = row['Q5.2']
+        second_prediction = row['Q7.2']
+        third_prediction = row['Q9.2']
+        fourth_prediction= row['Q11.2']
         first_confidence, first_confidence_after_xai = row['Q5.3'], row['Q6.6']
         second_confidence, second_confidence_after_xai = row['Q7.3'], row['Q8.6']
         third_confidence, third_confidence_after_xai = row['Q9.3'], row['Q10.6']
         fourth_confidence, fourth_confidence_after_xai = row['Q11.3'], row['Q12.6']
+        if row['local_surrogate'] == 0:
+            first_ai, second_ai, third_ai, fourth_ai = first_linear_ai_prediction, second_linear_ai_prediction, third_linear_ai_prediction, fourth_linear_ai_prediction
+        else:
+            first_ai, second_ai, third_ai, fourth_ai = first_ai_prediction, second_ai_prediction, third_ai_prediction, fourth_ai_prediction
+        if first_ai == first_prediction:
+            q1_s.append(compute_increased_trust_ind(first_confidence, first_confidence_after_xai))
+            q1_d.append(None)
+        else:
+            q1_d.append(compute_increased_trust_ind(first_confidence, first_confidence_after_xai))
+            q1_s.append(None)
+        if second_ai == second_prediction:
+            q2_s.append(compute_increased_trust_ind(second_confidence, second_confidence_after_xai))
+            q2_d.append(None)
+        else:
+            q2_d.append(compute_increased_trust_ind(second_confidence, second_confidence_after_xai))
+            q2_s.append(None)
+        if third_ai == third_prediction:
+            q3_s.append(compute_increased_trust_ind(third_confidence, third_confidence_after_xai))
+            q3_d.append(None)
+        else:
+            q3_d.append(compute_increased_trust_ind(third_confidence, third_confidence_after_xai))
+            q3_s.append(None)
+        if fourth_ai == fourth_prediction:
+            q4_s.append(compute_increased_trust_ind(fourth_confidence, fourth_confidence_after_xai))
+            q4_d.append(None)
+        else:
+            q4_d.append(compute_increased_trust_ind(fourth_confidence, fourth_confidence_after_xai))
+            q4_s.append(None)
+        
+        
         q1.append(compute_increased_trust_ind(first_confidence, first_confidence_after_xai))
         q2.append(compute_increased_trust_ind(second_confidence, second_confidence_after_xai))
         q3.append(compute_increased_trust_ind(third_confidence, third_confidence_after_xai))
         q4.append(compute_increased_trust_ind(fourth_confidence, fourth_confidence_after_xai))
     data['Q1 increased trust after xai'], data['Q2 increased trust after xai'], data['Q3 increased trust after xai'], data['Q4 increased trust after xai'] = q1, q2, q3, q4
-    return data[['Q1 increased trust after xai', 'Q2 increased trust after xai', 'Q3 increased trust after xai', 'Q4 increased trust after xai']].mean(numeric_only=True, axis=1)
+    data['Q1 icr tru same'], data['Q2 icr tru same'], data['Q3 icr tru same'], data['Q4 icr tru same'] = q1_s, q2_s, q3_s, q4_s
+    data['Q1 icr tru diff'], data['Q2 icr tru diff'], data['Q3 icr tru diff'], data['Q4 icr tru diff'] = q1_d, q2_d, q3_d, q4_d
+    return data[['Q1 increased trust after xai', 'Q2 increased trust after xai', 'Q3 increased trust after xai', 'Q4 increased trust after xai']].mean(numeric_only=True, axis=1),\
+        data[['Q1 icr tru same', 'Q2 icr tru same', 'Q3 icr tru same', 'Q4 icr tru same']].mean(numeric_only=True, axis=1),\
+            data[['Q1 icr tru diff', 'Q2 icr tru diff', 'Q3 icr tru diff', 'Q4 icr tru diff']].mean(numeric_only=True, axis=1)        
 
 def compute_perceived_trust_in_xai(data):
     q1, q2, q3, q4 = [], [], [], []
@@ -475,33 +487,9 @@ def print_demographic_latex_table(result_df):
     print(texheader)
     print(texdata)
     print("\\end{array}\\\\\n \\end{aligned} $$ \n \\caption{Overview of participants' demographic factors.} \n \\label{tab:user_information} \n \\end{table}")
-
-def generate_precision_recall_curve(result_df):
-    fig, ax = plt.subplots()
-    picture_linear = result_df.loc[(result_df['representation'] == 0) & (result_df['local_surrogate'] == 0)]
-    picture_rule = result_df.loc[(result_df['representation'] == 0) & (result_df['local_surrogate'] == 1)]
-    picture_counterfactual = result_df.loc[(result_df['representation'] == 0) & (result_df['local_surrogate'] == 2)]
-    text_linear = result_df.loc[(result_df['representation'] == 1) & (result_df['local_surrogate'] == 0)]
-    text_rule = result_df.loc[(result_df['representation'] == 1) & (result_df['local_surrogate'] == 1)]
-    text_counterfactual = result_df.loc[(result_df['representation'] == 1) & (result_df['local_surrogate'] == 2)]
-    control_group = result_df.loc[(result_df['representation'] == 2) & (result_df['local_surrogate'] == 3)]
-    ax.scatter(picture_linear['b_recall_understanding'], picture_linear['b_precision_understanding'], label="linear image")#, color="purple")
-    ax.scatter(picture_rule['b_recall_understanding'], picture_rule['b_precision_understanding'], label="rule image")#, color="purple")
-    ax.scatter(picture_counterfactual['b_recall_understanding'], picture_counterfactual['b_precision_understanding'], label="cf image")#, color="purple")
-    ax.scatter(text_linear['b_recall_understanding'], text_linear['b_precision_understanding'], label="linear text")#, color="purple")
-    ax.scatter(text_rule['b_recall_understanding'], text_rule['b_precision_understanding'], label="rule text")#, color="purple")
-    ax.scatter(text_counterfactual['b_recall_understanding'], text_counterfactual['b_precision_understanding'], label="cf text")#, color="purple")
-    ax.scatter(control_group['b_recall_understanding'], control_group['b_precision_understanding'], label="control")#, color="purple")
-    ax.set_title('Precision-Recall Curve')
-    ax.set_ylabel('Precision')
-    ax.set_xlabel('Recall')
-    ax.legend()
-    plt.savefig("./user_study/boxplot/precision_recall.png")
-    plt.show()
     
 def measure_pearson_correlation(result_df):
-    print("pearson")
-    print(result_df['b_trust'])
+    print("Measure Pearson correlation between metrics")
     nan_idx = pd.isnull(result_df['b_trust']).to_numpy().nonzero()[0]
     result_without_nan = result_df.drop(index = nan_idx)
     
@@ -572,15 +560,15 @@ if __name__ == "__main__":
     representations = ['picture', 'text']
     dataset_name = "Compas"
     latex, generate_table = True, False
-    data = pd.read_csv("./user_study/" + dataset_name + "+Control.csv")
+    data = pd.read_csv("./user_study/participants_results/" + dataset_name + "+Control.csv")
     data['local_surrogate'], data['representation'] = 3, 2#'control', 'control'
     data = ensure_valid_answer(data, dataset_name)
-    print("control group", data.shape)
+    print("size of the control group", data.shape)
     data = data.iloc[:20]
     for local_surrogate in local_surrogates:
         for representation in representations:
             try:
-                temp_df = pd.read_csv("./user_study/" + dataset_name + "+" + local_surrogate + "+" + representation + ".csv")
+                temp_df = pd.read_csv("./user_study/participants_results/" + dataset_name + "+" + local_surrogate + "+" + representation + ".csv")
                 if local_surrogate == 'Linear':
                     temp_df['local_surrogate'] = 0 
                 elif local_surrogate == "Rule":
@@ -590,12 +578,11 @@ if __name__ == "__main__":
                 temp_df['representation'] = 0 if representation == "picture" else 1#representation
                 temp_df = ensure_valid_answer(temp_df, dataset_name)
                 temp_df = temp_df.iloc[:20]
-                print(temp_df.shape)
                 data = pd.concat([data, temp_df])
             except FileNotFoundError:
                 print()
     data.reset_index(inplace=True)
-    print("nombre d'individu", len(data))
+    print("Number of participants", len(data))
     data = ensure_valid_answer(data, dataset_name)
     data.reset_index(inplace=True)
     data = add_demographic_information(data, dataset_name, local_surrogates, representations)
@@ -606,9 +593,10 @@ if __name__ == "__main__":
     print("now that I remove people after understanding", len(data))
     result_df[['QS.1', 'QS.2', 'QS.3', 'QS.4', 'QS.5', 'QS.6', 'QS.7', 'QS.8', 'satisfaction']] = compute_satisfaction(data)
     print("now that I remove people after satisfaction", len(data))
-    result_df['b_precision_understanding'], result_df['b_recall_understanding'], result_df['b_top_understanding'] = compute_behavioral_understanding(data, dataset_name)
+    result_df['b_precision_understanding'], result_df['b_recall_understanding'], \
+        result_df['b_top_understanding'] = compute_behavioral_understanding(data, dataset_name)
     result_df['b_trust'], result_df['b_ord_trust'] = compute_behavioral_trust(data, dataset_name)
-    result_df['increased trust after xai'] = compute_increased_trust(data)
+    result_df['increased trust after xai'], result_df['inc tru same'], result_df['inc tru diff'] = compute_increased_trust(data)
     result_df['perceived trust in xai'] = compute_perceived_trust_in_xai(data)
     result_df['perceived understanding in xai'] = compute_perceived_understanding_in_xai(data)
     time = data[['Q6.7_Page Submit', 'Q8.7_Page Submit', 'Q10.7_Page Submit', 'Q12.7_Page Submit']].astype('float')
@@ -617,10 +605,9 @@ if __name__ == "__main__":
     
     predictors = ['local_surrogate', 'representation']
     metrics = ['b_trust', 'understanding', 'trust', 'satisfaction', 'Duration (in seconds)', 'b_precision_understanding', 
-               'b_recall_understanding',  'b_top_understanding', "b_ord_trust", 'time', 'increased trust after xai', 
-               'perceived trust in xai', 'perceived understanding in xai']#, 'QU.1', 'QU.2', 'QU.3', 'QU.4', 'QU.5',
-               #'QU.6', 'QU.7', 'QU.8', 'QS.1', 'QS.2', 'QS.3', 'QS.4', 'QS.5', 'QS.6', 'QS.7', 'QS.8', 'QT.1', 
-               #'QT.2', 'QT.3', 'QT.4']
+               'b_recall_understanding',  'b_top_understanding', "b_ord_trust", "inc tru same", 
+               "inc tru diff", 'time', 'increased trust after xai', 
+               'perceived trust in xai', 'perceived understanding in xai']
     result_df['domain'] = dataset_name
     result_df.to_csv("./user_study/results.csv")
     
@@ -635,132 +622,7 @@ if __name__ == "__main__":
         result_df['Highest education level completed'].replace({"High school diploma/A-levels": 0, 
                             "Technical/community college": 1, 'Undergraduate degree (BA/BSc/other)': 2, 
                             "Graduate degree (MA/MSc/MPhil/other)": 3, "Doctorate degree (PhD/other)": 4}, inplace=True)
-        
-    representation_picture = result_df.loc[result_df['representation'] == 0]#.astype('float64')
-    representation_text = result_df.loc[result_df['representation'] == 1]#.astype('float64')
-    representation_control = result_df.loc[result_df['representation'] == 2]#.astype('float64')
-    linear_result = result_df.loc[result_df['local_surrogate'] == 0]#.astype('float64')
-    rule_result = result_df.loc[result_df['local_surrogate'] == 1]#.astype('float64')
-    counterfactual_result = result_df.loc[result_df['local_surrogate'] == 2]#.astype('float64')
-
-    picture_linear = result_df.loc[(result_df['representation'] == 0) & (result_df['local_surrogate'] == 0)]
-    picture_rule = result_df.loc[(result_df['representation'] == 0) & (result_df['local_surrogate'] == 1)]
-    picture_counterfactual = result_df.loc[(result_df['representation'] == 0) & (result_df['local_surrogate'] == 2)]
-    text_linear = result_df.loc[(result_df['representation'] == 1) & (result_df['local_surrogate'] == 0)]
-    text_rule = result_df.loc[(result_df['representation'] == 1) & (result_df['local_surrogate'] == 1)]
-    text_counterfactual = result_df.loc[(result_df['representation'] == 1) & (result_df['local_surrogate'] == 2)]
-    control_group = result_df.loc[(result_df['representation'] == 2) & (result_df['local_surrogate'] == 3)]
-    #generate_precision_recall_curve(result_df)
     
+    result_df.to_csv("./user_study/results_" + dataset_name + ".csv")
     measure_pearson_correlation(result_df)
     
-    for metric in metrics:
-        print(metric)
-
-        """print("nb person in linear + image", picture_linear.shape[0])
-        print("nb person in linear + text", text_linear.shape[0])
-        print("nb person in rule + text", text_rule.shape[0])
-        print("nb person in rule + image", picture_rule.shape[0])
-        print("nb person in counterfactual + text", text_counterfactual.shape[0])
-        print("nb person in counterfactual + image", picture_counterfactual.shape[0])
-        print("nb person in control", control_group.shape[0])"""
-        
-        #perform three-way ANOVA        
-        if generate_table:
-            print(result_df_r.columns)
-            model = ols("""satisfaction ~ C(representation) + C(local_surrogate) + C(Age) +
-                    C(representation):C(local_surrogate) + C(representation):C(Age) + 
-                    C(Highest_education_level_completed) + C(local_surrogate):C(Age) +
-                    C(representation):C(local_surrogate):C(Age)""", data=result_df_r).fit()
-            table = sm.stats.anova_lm(model, typ=2)
-            print(table)
-        
-        print("friedman test")
-        #print(stats.friedmanchisquare(picture_linear, text_linear, control_group))#,picture_rule, picture_couterfactual, text_rule, text_counterfactual))
-        #print("representation")
-        #print(stats.friedmanchisquare(picture_linear, control_group))#picture_rule, picture_couterfactual))
-        #print("method")
-        #print(stats.friedmanchisquare(text_linear, text_rule, text_counterfactual))
-        data = np.array([picture_linear[metric], control_group[metric]])#text_linear, picture_rule, picture_couterfactual, text_rule, text_counterfactual, control_group])
-        print("Nemenyi post-hoc test")
-        print(sp.posthoc_nemenyi_friedman(data.T))
-
-        # Conducting two-sample ttest
-        #plt.violinplot([representation_picture, representation_text, representation_control], showmedians=True, inner="points")
-        seaborn.swarmplot([representation_picture[metric].tolist(), representation_text[metric].tolist(), 
-                           representation_control[metric].tolist()], color= "white")
-        seaborn.violinplot([representation_picture[metric], representation_text[metric], 
-                            representation_control[metric]], showmedians=True)#, inner="points")
-        plt.xticks([0, 1, 2], labels=["image", "text", "control"])
-        plt.xlabel("Groups")
-        plt.ylabel("measurements")
-        plt.title(metric)
-        plt.tight_layout
-        plt.savefig("./figures/" + dataset_name + "/" + metric.replace(' ', '_') + "_representation.png")
-        plt.show()
-        seaborn.swarmplot([linear_result[metric].tolist(), rule_result[metric].tolist(), 
-                           counterfactual_result[metric].tolist(), control_group[metric].tolist()], color= "white")
-        seaborn.violinplot([linear_result[metric].tolist(), rule_result[metric].tolist(), 
-                            counterfactual_result[metric].tolist(), control_group[metric].tolist()], showmedians=True)#, inner="points")
-        plt.xticks([0, 1, 2, 3], labels=["Linear", "Rules", "Counterfactual", "control"])
-        plt.xlabel("Groups")
-        plt.ylabel("measurements")
-        plt.title(metric)
-        plt.tight_layout
-        plt.savefig("./figures/" + dataset_name + "/" + metric.replace(' ', '_') + "_surrogate.png")
-        plt.show()
-  
-        nan_idx = pd.isnull(result_df[metric]).to_numpy().nonzero()[0]
-        result_without_nan = result_df.drop(index = nan_idx)
-        try:
-            mod2 = pg.linear_regression(result_without_nan[predictors], result_without_nan[metric])
-        except AssertionError as e:
-            print()
-            print("error")
-            print(e)
-        #print("multiple linear regression")
-        print(mod2.round(3))
-        # Print the result
-        #print("t-test")
-        # T-test for representation
-        """
-        result = pg.ttest(representation_picture[metric], representation_control[metric])
-        print("picture control")
-        print(result)
-        print()
-        result = pg.ttest(representation_text[metric], representation_control[metric])
-        print("text control")
-        print(result)
-        print()        
-        result = pg.ttest(representation_picture[metric], representation_text[metric])
-        print("picture text")
-        print(result)
-        print()
-          
-        # T-test for local surrogate     
-        result = pg.ttest(linear_result[metric], rule_result[metric])
-        print("linear rule")
-        print(result)
-        print()
-        result = pg.ttest(linear_result[metric], counterfactual_result[metric])
-        print("linear counterfactual")
-        print(result)
-        print()        
-        result = pg.ttest(linear_result[metric], control_group[metric])
-        print("linear control")
-        print(result)
-        print()
-
-        result = pg.ttest(counterfactual_result[metric], rule_result[metric])
-        print("counterfactual rule")
-        print(result)
-        print()
-        result = pg.ttest(rule_result[metric], control_group[metric])
-        print("rule control")
-        print(result)
-        print()        
-        result = pg.ttest(counterfactual_result[metric], control_group[metric])
-        print("counterfactual control")
-        print(result)
-        print()"""
-    result_df.to_csv("./user_study/results_" + dataset_name + ".csv")

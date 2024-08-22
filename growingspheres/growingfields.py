@@ -1,11 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from .utils.gs_utils import generate_inside_field, generate_categoric_inside_ball, distances, get_distances
-from itertools import combinations
+from .utils.gs_utils import generate_inside_field, generate_categoric_inside_ball
 import numpy as np
 from sklearn.metrics.pairwise import pairwise_distances
-from sklearn.utils import check_random_state
 
 
 class GrowingFields:
@@ -105,7 +103,7 @@ class GrowingFields:
         radius_ = self.first_radius
         
         while n_ennemies_ > 0:
-            first_layer_ = self.ennemies_in_layer_((0, radius_), self.n_in_layer, reducing_sphere=True)
+            first_layer_ = self.ennemies_in_layer_((0, radius_), self.n_in_layer)
             n_ennemies_ = first_layer_.shape[0]
             radius_ = radius_ / self.dicrease_radius
             if self.verbose == True:
@@ -135,7 +133,7 @@ class GrowingFields:
         return layer, radius_
     
     
-    def ennemies_in_layer_(self, segment, n=1000, reducing_sphere=False):
+    def ennemies_in_layer_(self, segment, n=1000):
         """
         Basis for GS: generates a hypersphere layer, labels it with the blackbox 
         and returns the instances that are predicted to belong to the target class.
@@ -189,36 +187,4 @@ class GrowingFields:
                 if self.prediction_fn(new_enn.reshape(1, -1)) == self.target_class:
                     out[k] = new_enn[k]
                     reduced += 1
-        if self.verbose == True:
-            print("Reduced %d coordinates"%reduced)
         return out
-
-    
-    def feature_selection_all(self, counterfactual):
-        """
-        Try all possible combinations of projections to make the explanation as sparse as possible. 
-        Warning: really long!
-        """
-        if self.verbose == True:
-            print("Grid search for projections...")
-        for k in range(self.obs_to_interprete.size):
-            print('==========', k, '==========')
-            for combo in combinations(range(self.obs_to_interprete.size), k):
-                out = counterfactual.copy()
-                new_enn = out.copy()
-                for v in combo:
-                    new_enn[v] = self.obs_to_interprete[v]
-                if self.target_other:
-                    if self.prediction_fn(new_enn.reshape(1, -1)) != self.target_class:
-                        print('bim')
-                        out = new_enn.copy()
-                        reduced = k
-                else:
-                    if self.prediction_fn(new_enn.reshape(1, -1)) == self.target_class:
-                        print('bim')
-                        out = new_enn.copy()
-                        reduced = k
-        if self.verbose == True:
-            print("Reduced %d coordinates"%reduced)
-        return out
-    
