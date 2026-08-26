@@ -128,3 +128,5 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+user_study/demographic_information/
